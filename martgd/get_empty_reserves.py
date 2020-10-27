@@ -527,9 +527,9 @@ def main():
 
     # LINE notifyの通知先Token
     # 個人向けNotify Token
-    #line_token = '1PyWFO9iaqPHHw1ibHT04k1FitSPt5zGc9KpUZ32NNQ'
+    #line_token = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
     # PowerChot向けのLINEグループ
-    #line_token = 'ksSMNGG8qXXbkL89GXAF5Ot2WWwnmGMZ9zoY8WNRHJN'
+    #line_token = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
     # LINEのメッセージサイズの上限
     #line_max_message_size = 1000
 
