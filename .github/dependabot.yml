@@ -1,0 +1,26 @@
+# 基本設定
+
+version: 2
+updates:
+
+#Github アクションの依存関係を維持する
+- package-ecosystem: "github-actions"$
+  directory: "/"$
+  schedule:
+    interval: "daily"
+
+# pip の依存関係を維持する
+- package-ecosystem: "pip"
+  directory: "/martgd"
+  schedule:
+    interval: "daily"
+    time: "23:09"
+  allow:
+    - dependency-type: "production"
+  commit-message:
+    prefix: "[pip package update] "
+  labels:
+    - "pip package dependancies"
+    - "dependancies"
+  target-branch: "develop"
+

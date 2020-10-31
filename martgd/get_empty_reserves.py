@@ -193,11 +193,11 @@ def create_inputdate(target_months_lists):
     """
     検索対象年月日の開始日と終了日を作成する
     """
-    # 開始日を計算する
-    _now = datetime.datetime.now()
-    start_year = _now.year
-    start_month = _now.month
-    start_day = _now.day + 1
+    # 開始日を計算する。明日の日付を開始日とする
+    _tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+    start_year = _tomorrow.year
+    start_month = _tomorrow.month
+    start_day = _tomorrow.day
     # 終了時を計算する
     end_month = target_months_lists[-1]
     end_year = check_new_year( end_month )
@@ -260,10 +260,7 @@ def setup_driver():
     options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    #driver = webdriver.Chrome('/opt/google/chromedriver/chromedriver', options=options)
-    #driver = webdriver.Chrome('/usr/lib64/chromium-browser/headless_shell', options=options)
-    #driver = webdriver.Chrome('/usr/lib64/chromium-browser/chromiumdriver', options=options)
-    driver = webdriver.Chrome('/usr/local/bin/chromedriver', options=options)
+    driver = webdriver.Chrome('/usr/lib64/chromium-browser/chromedriver', options=options)
     return driver
 
 #def selenium_get_cookie(driver, first_url):
