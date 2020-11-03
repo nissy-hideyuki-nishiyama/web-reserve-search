@@ -10,6 +10,7 @@ from time import sleep
 
 # ファイルIO、システム関連
 import sys
+import os
 
 # 正規表現
 import re
@@ -23,6 +24,14 @@ import calendar
 # JSONファイルの取り扱い
 import json
 
+# AWS boto
+import boto3
+import botocore
+
+import subprocess
+
+s3 = boto3.resource('s3')
+
 # 祝日のリスト
 #public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
 #public_holiday[1] = [ 1, 13 ]
@@ -34,6 +43,42 @@ import json
 #public_holiday[8] = [ 10 ]
 #public_holiday[9] = [ 21, 22 ]
 #public_holiday[11] = [ 3, 23 ]
+
+def is_exist_files(s3bucket, *args):
+    """
+    設定ファイルと祝日ファイルが存在することを確認する
+    """
+    # ローカルのファイル保存先を指定する
+    for file_s3path in args:
+        # ファイル名のみ抽出する
+        file_name = os.path.basename(file_s3path)
+        file_path = '/tmp/' + file_name
+        # ファイルの存在を確認する
+        if os.path.isfile(file_path):
+            print(f'found {file_path}')
+        else:
+            #print(f'downloading {file_name} from s3.')
+            get_file_from_s3(s3bucket, file_s3path)
+
+def get_file_from_s3(s3bucket, file_s3path):
+    """
+    設定ファイルと祝日ファイルを所定のS3バケットから取得し、/tmpディレクトリに保存する
+    """
+    # バケット名とファイルパスを設定する
+    bucket_name = s3bucket
+    key = file_s3path
+    file_name = os.path.basename(file_s3path)
+    # ローカルのファイル保存先を指定する
+    file_path = '/tmp/' + file_name
+    # S3からファイルをダウンロードする
+    try:
+        bucket = s3.Bucket(bucket_name)
+        bucket.download_file(key, file_path)
+        #print(subprocess.run(["ls", "-l", "/tmp" ], stdout=subprocess.PIPE))
+        print(f'downloaded {file_name} from s3bucket:{file_s3path}')
+        return
+    except Exception as e:
+        print(e)
 
 def set_public_holiday(public_holiday_file_name, public_holiday):
     """
@@ -77,8 +122,8 @@ def check_new_year(month):
         year = _this_year
     #print(f'Yert: {year}')
     return year
-     
-    
+
+
 #def create_month_list(month_num=4, start_day=5):
 def create_month_list(cfg):
     """
@@ -187,8 +232,8 @@ def create_date_string_list(target_months_list, public_holiday, cfg):
     # 全体の文字列を表示
     #print(f'All date string: {date_string_list}')
     return date_string_list
-    
-    
+
+
 def create_inputdate(target_months_lists):
     """
     検索対象年月日の開始日と終了日を作成する
@@ -208,7 +253,7 @@ def create_inputdate(target_months_lists):
     input_data_date = [ start_year, start_month, start_day, end_year, end_month, end_day ]
     #print(f'input_data_date: {input_data_date}')
     return input_data_date
-    
+
 
 #def create_inputdata(want_court_list, reserve_status, input_data_date):
 def create_inputdata(cfg, input_data_date):
@@ -257,10 +302,23 @@ def setup_driver():
     # Chromeを指定する
     options = webdriver.ChromeOptions()
     #options.binary_location = '/usr/bin/chromium-browser'
-    options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
+    options.binary_location = '/opt/headless-chromium/headless_shell'
+    ## オプションにヘッドレスモードで実行させる記述を書く
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    driver = webdriver.Chrome('/usr/lib64/chromium-browser/chromedriver', options=options)
+    options.add_argument('--single-process')
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('--hide-scrollbars')
+    options.add_argument('--disable-gpu')
+    options.add_argument("--disable-application-cache")
+    options.add_argument("--disable-infobars")
+    options.add_argument("--ignore-certificate-errors")
+    ## Seleniumが使用するWebDriverを作成
+    driver = webdriver.Chrome(
+        ## Layerで用意したchromedriverのパスを指定
+        '/opt/headless-chromium/chromedriver',
+        options = options
+    )
     return driver
 
 #def selenium_get_cookie(driver, first_url):
@@ -351,7 +409,7 @@ def selenium_input_datas(driver, input_data_value):
     assert '会員：ServiceAce>コートスケジュール表示画面' in driver.title
     #return cookie, ncforminfo_value
 
-    
+
 def save_result_html(html, file_name):
     """
     検索結果のHTMLをファイルとしてローカルに保存する
@@ -362,7 +420,7 @@ def save_result_html(html, file_name):
         f.write(html)
     return file_name
 
-    
+
 #def analize_html(court, file_name):
 def analize_html(court, html):
     """
@@ -391,7 +449,7 @@ def analize_html(court, html):
     #print(f'{court}: reserve_name_list')
     #print(reserve_name_list)
     return reserve_name_list
-    
+
 def create_selected_reserve_list(court_reserve_name_list, selected_reserve_name_list, cfg, date_string_list):
     """
     希望時間帯および希望日のみ抽出したリストを作成する
@@ -435,7 +493,7 @@ def create_selected_reserve_list(court_reserve_name_list, selected_reserve_name_
     #print(selected_reserve_name_list)
     return selected_reserve_name_list
 
-    
+
 #def create_mesage_body(selected_reserve_name_list, message_bodies, line_max_message_size):
 def create_mesage_body(selected_reserve_name_list, message_bodies, cfg):
     """
@@ -449,7 +507,6 @@ def create_mesage_body(selected_reserve_name_list, message_bodies, cfg):
     # ditcをkeyで照準に並べ替える。ditから配列[(day, [reserves]), (...)]になる
     sorted_selected_reserve_name_list = sorted(selected_reserve_name_list.items())
     #print(type(sorted_selected_reserve_name_list))
-    #print(dir(sorted_selected_reserve_name_list))
     #print(sorted_selected_reserve_name_list)
     # メッセージ本体を作成する
     for _day_reserves in sorted_selected_reserve_name_list:
@@ -467,7 +524,7 @@ def create_mesage_body(selected_reserve_name_list, message_bodies, cfg):
     message_bodies.append(_body[:line_max_message_size])
     # メッセージ本体の文字数が1000より大きい場合は予約日時だけのメッセージ本体を作成し、2通目のメッセージとする
     if len(_body) >= line_max_message_size:
-        _body_datetime = f'{_body_datetime}空きコートが多いのでWEBでサイトで確かめてください。上記の時間帯に空きコー>トがあります。'
+        _body_datetime = f'{_body_datetime}空きコートが多いのでWEBでサイトで確かめてください。上記の時間帯に空きコー>>トがあります。'
         message_bodies.append(_body_datetime)
     #else:
     #    print(f'within 1000 characters.')
@@ -498,9 +555,10 @@ def send_line_notify(message_bodies, cfg):
         #data = {'message': f'空き予約はありませんでした'}
         #requests.post(line_notify_api, headers = headers, data = data)
         print(f'not found empty reserves.')
-    
-    
-def main():
+
+
+#def main():
+def lambda_handler(event, context):
     """
     メインルーチン
     """
@@ -518,7 +576,7 @@ def main():
     # D:4
     # E:7
     #want_court_list = { 'C': 3, 'D': 4, 'E': 7 }
-    
+
     # 希望時間帯(フィルターに利用する)
     #want_time_list = [ '08:00～10:00', '10:00～12:00', '12:00～14:00', '14:00～16:00' ]
 
@@ -558,10 +616,16 @@ def main():
             }
 
     # 処理の開始
+    # /tmpファイルに設定ファイルがあるか確認し、なければS3からファイルをダウンロードする
+    #is_exist_files(s3bucket, *args)
+    is_exist_files('nissy-jp-input', 'webscribe/tennis_reserve_search/martgd/cfg.json', 'webscribe/tennis_reserve_search/common/public_holiday.json')
+
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    set_public_holiday('public_holiday.json', public_holiday)
+    #set_public_holiday('public_holiday.json', public_holiday)
+    set_public_holiday('/tmp/public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = read_json_cfg('cfg.json')
+    #cfg = read_json_cfg('cfg.json')
+    cfg = read_json_cfg('/tmp/cfg.json')
     # 検索対象月のリストを作成する
     #target_months_list = create_month_list(month_num=4, start_day=5)
     target_months_list = create_month_list(cfg)
@@ -583,13 +647,13 @@ def main():
     selenium_get_cookie(driver, cfg)
     # 検索条件を入力して、空き情報のHTMLを取得し、空き予約名リストを作成する
     court_reserve_name_list = selenium_post_conditions(driver, input_data, court_reserve_name_list)
-    
+
     # デバッグ用　取得しているHTMLファイルからリストを作成する
     #court_reserve_name_list['C'] = analize_html('C', 'martgd_empty_reserves_C.html')
     #court_reserve_name_list['D'] = analize_html('D', 'martgd_empty_reserves_D.html')
     #court_reserve_name_list['E'] = analize_html('E', 'martgd_empty_reserves_E.html')
     #print(f'\n\ncourt_reserve_name_list:\n{court_reserve_name_list}')
-    
+
     # seleniumを終了する
     driver.quit()
     # 空き予約名リストから希望時間帯のみを抽出したリストを作成する
@@ -602,8 +666,11 @@ def main():
     #send_line_notify(message_bodies, line_token)
     send_line_notify(message_bodies, cfg)
     # 終了する
-    exit()
- 
-if __name__ == '__main__':
-    main()
-    
+    #exit()
+    return {
+        'status': 200,
+        'body': 'Completed'
+    }
+
+#if __name__ == '__main__':
+#    main()
