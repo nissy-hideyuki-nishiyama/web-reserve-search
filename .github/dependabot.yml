@@ -4,8 +4,8 @@ version: 2
 updates:
 
 #Github アクションの依存関係を維持する
-- package-ecosystem: "github-actions"$
-  directory: "/"$
+- package-ecosystem: "github-actions"
+  directory: "/"
   schedule:
     interval: "daily"
 
