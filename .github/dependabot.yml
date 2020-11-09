@@ -18,7 +18,7 @@ updates:
   allow:
     - dependency-type: "production"
   commit-message:
-    prefix: "[pip package update] "
+    prefix: "[pip] "
   labels:
     - "pip package dependancies"
     - "dependancies"
