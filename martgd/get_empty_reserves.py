@@ -23,6 +23,9 @@ import calendar
 # JSONファイルの取り扱い
 import json
 
+# 文字コード処理関連。波ダッシュと全角チルダへの対応のため。
+import unicodedata
+
 # 祝日のリスト
 #public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
 #public_holiday[1] = [ 1, 13 ]
@@ -34,6 +37,17 @@ import json
 #public_holiday[8] = [ 10 ]
 #public_holiday[9] = [ 21, 22 ]
 #public_holiday[11] = [ 3, 23 ]
+
+def convert_WAVEDASH_to_FULLWIDTHTILDE(string, reverse=False):
+    """
+    波ダッシュを全角チルダに変換する。reverseにTrue渡せば逆になる
+    """
+    wavedash = (b'\xe3\x80\x9c').decode('utf-8')
+    fullwidthtilde = (b'\xef\xbd\x9e').decode('utf-8')
+    if not reverse:
+        return string.replace(wavedash, fullwidthtilde)
+    else:
+        return string.replace(fullwidthtilde, wavedash)
 
 def set_public_holiday(public_holiday_file_name, public_holiday):
     """
@@ -420,6 +434,11 @@ def create_selected_reserve_list(court_reserve_name_list, selected_reserve_name_
                         for _reserve in _reserves:
                             #print(f'want_time: {_want_time}')
                             #print(f'reserve_string: {_reserve}')
+                            # 2020/12/03に突如発生した。マートガーデン側のデータ更新が怪しい
+                            # 波ダッシュが文字列に含まれていたら、全角チルドに変換する
+                            if b'\xe3\x80\x9c' in _reserve.encode('utf-8'):
+                                _reserve = convert_WAVEDASH_to_FULLWIDTHTILDE(_reserve)
+                                #print(_reserve.encode('utf-8'))
                             if str(_want_time) == str(_reserve):
                                 #print(f'{_court}:{_day}:{_reserve}')
                                 # 希望時間帯と一致した予約を希望予約名リストに追加する
