@@ -24,3 +24,73 @@ updates:
     - "dependancies"
   target-branch: "develop"
 
+- package-ecosystem: "pip"
+  directory: "/martgd_local"
+  schedule:
+    interval: "daily"
+    time: "23:09"
+  allow:
+    - dependency-type: "production"
+  commit-message:
+    prefix: "[pip] "
+  labels:
+    - "pip package dependancies"
+    - "dependancies"
+  target-branch: "develop"
+
+- package-ecosystem: "pip"
+  directory: "/kawasaki"
+  schedule:
+    interval: "daily"
+    time: "23:09"
+  allow:
+    - dependency-type: "production"
+  commit-message:
+    prefix: "[pip] "
+  labels:
+    - "pip package dependancies"
+    - "dependancies"
+  target-branch: "develop"
+
+- package-ecosystem: "pip"
+  directory: "/tama"
+  schedule:
+    interval: "daily"
+    time: "23:09"
+  allow:
+    - dependency-type: "production"
+  commit-message:
+    prefix: "[pip] "
+  labels:
+    - "pip package dependancies"
+    - "dependancies"
+  target-branch: "develop"
+
+- package-ecosystem: "pip"
+  directory: "/chofu"
+  schedule:
+    interval: "daily"
+    time: "23:09"
+  allow:
+    - dependency-type: "production"
+  commit-message:
+    prefix: "[pip] "
+  labels:
+    - "pip package dependancies"
+    - "dependancies"
+  target-branch: "develop"
+
+- package-ecosystem: "pip"
+  directory: "/hachioji"
+  schedule:
+    interval: "daily"
+    time: "23:09"
+  allow:
+    - dependency-type: "production"
+  commit-message:
+    prefix: "[pip] "
+  labels:
+    - "pip package dependancies"
+    - "dependancies"
+  target-branch: "develop"
+
