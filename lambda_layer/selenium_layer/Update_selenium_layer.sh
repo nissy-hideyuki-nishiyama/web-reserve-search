@@ -29,7 +29,7 @@ mkdir -p ${Work_Dir}/python
 pip install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/hachioji/requirements.txt 
 
 # zipファイルを作成する
-zip -r ${Zip_Filename} ./python
+zip -ry ${Zip_Filename} ./python
 
 # zipファイルを所定のディレクトリにアップロードする
 ${AWSCMD} s3 cp ./${Zip_Filename} s3://${S3Bucket}/${S3Path}/

@@ -37,7 +37,6 @@ ln -s ./swiftshader/libGLESv2.so.TOC ./libGLESv2.so.TOC
 # download chromedriver
 cd "${BUILD_BASE}/distfiles/headless-chromium/"
 echo "download stable chromedriver from google."
-#curl https://chromedriver.storage.googleapis.com/86.0.4240.22/chromedriver_linux64.zip --output chromedriver_linux64.zip
 curl https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_linux64.zip --output chromedriver_linux64.zip
 unzip chromedriver_linux64.zip
 rm chromedriver_linux64.zip
@@ -45,10 +44,8 @@ chmod 755 chromedriver
 du -h -d 2./
 
 # zip compress file
-#cd "${BUILD_BASE}/distfiles"
-zip -r headless-chromium_${VERSION}.zip *
-cd ../
-mv headless-chromium/headless-chromium_${VERSION}.zip ./
+cd "${BUILD_BASE}/distfiles"
+zip -ry headless-chromium_${VERSION}.zip headless-chromium
 file headless-chromium_${VERSION}.zip
 ls -l headless-chromium_${VERSION}.zip
 echo "build finished." 
