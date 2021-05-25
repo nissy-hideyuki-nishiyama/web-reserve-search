@@ -149,7 +149,7 @@ def get_empty_reserves(cfg, date_list, reserves_list, cookies, http_req_num):
                 #print(res_court.history)
                 http_req_num += 1
                 # 指定年月日の時間帯別空きコートのリストを作成する
-                get_empty_time(res_court[1], cfg, _day, reserves_list)
+                reserves_list = get_empty_time(res_court[1], cfg, _day, reserves_list)
     #retrun court_link_list
     print(json.dumps(reserves_list, indent=2, ensure_ascii=False))
     return reserves_list, http_req_num
@@ -182,8 +182,10 @@ def get_request_retry(*args, **kwargs):
                 break
         else:
             print(f'faild get request: {_entity}')
+            res = None
     except Timeout:
         print(f'get request timeout: {_entity}')
+        res = None
     else:
         #print(f'{res.headers}')
         #print(dir(res))
@@ -284,8 +286,8 @@ def get_empty_time(response, cfg, day, reserves_list):
                     # 空き予約リストに追加する
                     reserves_list[f'{day}'].setdefault(reserve, []).append(court_name)
     #print(reserves_list)
-    #return reserves_list
-    return None
+    return reserves_list
+    #return None
 
 
 ## メッセージを送信する
