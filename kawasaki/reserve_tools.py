@@ -14,6 +14,10 @@ import json
 ## WEBAPI関連
 import requests
 
+## 処理時間の計測関連
+from functools import wraps
+import time
+
 # 設定ファイルの読み込み
 ## 祝日ファイル
 def set_public_holiday(public_holiday_file_name, public_holiday):
@@ -53,9 +57,15 @@ def save_html_file(response):
 # requestsメソッドのレスポンスをHTMLファイルを保存する
 def save_html_to_filename(response, filename):
     html = response.text
-    print(f'save html file: {filename}')
+    #print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(html)
+
+# aiohttp.requestsメソッドのレスポンスをHTMLファイルを保存する
+def save_html_to_filename_for_aiohttp(response, filename):
+    print(f'save html file: {filename}')
+    with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
+        f.write(response)
 
 # 年越し処理
 def check_new_year(month):
@@ -351,7 +361,21 @@ def send_line_notify(message_bodies, cfg):
         print(f'not found empty reserves.')
 
 
-## メッセージを送信する
+# 実行時間を計測する
+def elapsed_time(f):
+    """
+    関数の処理時間を計測する
+    """
+    print(f"call elapsed_time.")
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        #print(f"start: {start}")
+        v = f(*args, **kwargs)
+        print(f"{f.__name__}: {time.time() - start}")
+        return v
+    return wrapper
+
 
 # メインルーチン
 def main():

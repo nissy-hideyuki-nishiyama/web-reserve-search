@@ -3,6 +3,7 @@ from time import sleep
 import math
 import datetime
 import calendar
+import time
 
 # ファイルIO、ディレクトリ関連
 import os
@@ -27,8 +28,9 @@ import reserve_tools
 
 # 検索結果ページの表示件数
 page_unit = 5
-#page = 0
-#is_empty = 'False'
+
+# HTTPリクエスト数
+http_req_num = 0
 
 # 年月日時分の入力リストを作成する
 #def create_datetime_list(target_months_list, selected_weekdays):
@@ -57,7 +59,7 @@ def create_datetime_list(target_months_list, public_holiday, cfg):
             for _hour in time_list:
                 # 開始時刻と終了時刻を作成する
                 _shour = _hour
-                # 開始時刻が9時の場合は3時間後とする
+                # 開始時刻が9時の場合は3時間にする
                 if _hour == 9:
                     _ehour = _hour + 3
                 else:
@@ -83,6 +85,8 @@ def get_cookie_request(cfg):
     # セッションを開始する
     session = requests.session()
     response = session.get(cfg['first_url'])
+    global http_req_num
+    http_req_num += 1
     # cookie情報を初期化し、次回以降のリクエストでrequestsモジュールの渡せる形に整形する
     cookies = {}
     cookies[cfg['cookie_name_01']] = session.cookies.get(cfg['cookie_name_01'])
@@ -96,6 +100,8 @@ def go_to_search_date_menu(cfg, headers, cookies):
     施設の空き状況検索の利用日時からのリンクをクリックして、検索画面に移動する
     """
     res = requests.get(cfg['search_url'], headers=headers, cookies=cookies)
+    global http_req_num
+    http_req_num += 1
     #print(res.text)
     return res
 
@@ -165,6 +171,8 @@ def search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list
         params = urllib.parse.urlencode(form_data)
         # フォームデータを使って、空き予約を検索する
         res = requests.post(cfg['search_url'], headers=headers, cookies=cookies, data=params)
+        global http_req_num
+        http_req_num += 1
         # デバッグ用としてhtmlファイルとして保存する
         #_datetime_string = str(_datetime[0]) + str(_datetime[1]).zfill(2) + str(_datetime[2]).zfill(2) + str(_datetime[3]).zfill(2) + str(_datetime[4]).zfill(2)
         #_file_name = f'result_{_datetime_string}.html'
@@ -174,7 +182,6 @@ def search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list
         analyze_html(cfg, cookies, _datetime, res, reserves_list)
     # 空き予約リストを返す
     return reserves_list
-
 
 ## 利用日時ページに検索データを入力して検索する
 @reserve_tools.elapsed_time
@@ -209,6 +216,8 @@ def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res
     params = urllib.parse.urlencode(form_data)
     # フォームデータを使って、空き予約を検索する
     res = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
+    global http_req_num
+    http_req_num += 1
     # デバッグ用としてhtmlファイルとして保存する
     #_datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2) +  '01'
     #_file_name = f'result_{_datetime_string}.html'
@@ -338,10 +347,11 @@ def get_empty_reserve_name(cfg, datetime, data_form, reserves_list):
                                 if _time not in reserves_list[_date]:
                                     reserves_list[_date][_time] = []
                                 reserves_list[_date][_time].append(_locate_court)
-    print(reserves_list)
+    #print(reserves_list)
     return reserves_list
 
 ### メインルーチン ###
+@reserve_tools.elapsed_time
 def main():
     """
     メインルーチン
@@ -358,6 +368,8 @@ def main():
     headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
             }
+    # HTTPリクエスト数
+    #http_req_num = 0
     # 処理の開始
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
@@ -383,9 +395,23 @@ def main():
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
     # LINEに送信する
     reserve_tools.send_line_notify(message_bodies, cfg)
-    # プログラウの終了
-    exit()
+    # 評価用
+    return None
+    # プログラムの終了
+    #exit()
 
 if __name__ == '__main__':
+    # 実行時間を測定する
+    start = time.time()
     main()
+
+    # デバッグ用(HTTPリクエスト回数を表示する)
+    print(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
+    # 実行時間を表示する
+    elapsed_time = time.time() - start
+    print(f'whole() duration time: {elapsed_time} sec')
+
+    exit()
+    #return ( reserves_list, http_req_num )
+
 
