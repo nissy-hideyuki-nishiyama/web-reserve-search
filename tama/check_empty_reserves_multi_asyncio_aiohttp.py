@@ -378,7 +378,7 @@ def prepare():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg2.json')
+    cfg = reserve_tools.read_json_cfg('cfg.json')
     # 検索リストを作成する
     ## 検索対象月を取得する
     target_months_list = reserve_tools.create_month_list(cfg)
