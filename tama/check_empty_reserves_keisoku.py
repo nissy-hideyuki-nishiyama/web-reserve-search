@@ -335,9 +335,9 @@ def main():
 
     # LINEにメッセージを送信する
     ## メッセージ本体を作成する
-    #reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
+    reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
     ## LINEに空き予約情報を送信する
-    #reserve_tools.send_line_notify(message_bodies, cfg)
+    reserve_tools.send_line_notify(message_bodies, cfg)
 
     # デバッグ用(HTTPリクエスト回数を表示する)
     print(f'HTTP リクエスト数: {http_req_num} 回数')
