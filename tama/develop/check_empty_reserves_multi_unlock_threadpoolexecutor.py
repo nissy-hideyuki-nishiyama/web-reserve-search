@@ -1,5 +1,6 @@
 # モジュールの読み込み
 ## HTMLクローラー関連
+from requests.exceptions import Timeout
 import requests
 import urllib
 
@@ -18,6 +19,14 @@ import re
 
 ## JSON関連
 import json
+
+# 平行処理モジュール関連
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    as_completed
+)
+from hashlib import md5
+from pathlib import Path
 
 # ツールライブラリを読み込む
 import reserve_tools
@@ -84,7 +93,8 @@ def go_select_searching(cfg, form_data, cookies):
     #res_form_data = get_formdata(res)
 
 # コートの空き予約を検索する
-def get_empty_reserves(cfg, date_list, reserves_list, cookies):
+@reserve_tools.elapsed_time
+def get_empty_reserves(cfg, date_list, reserves_list, cookies, http_req_num):
     """
     指定年月日のリストを引数として、その指定年月日の空き予約を検索する
     """
@@ -97,48 +107,107 @@ def get_empty_reserves(cfg, date_list, reserves_list, cookies):
     _now = datetime.datetime.now()
     _today = str(_now.year) + str(_now.month).zfill(2) + str(_now.day).zfill(2)
     #print(f'today: {_today}')
-    # 指定年月日のリストから検索するためのURLを生成する
-    for _day in date_list:
-        # 奈良原公園とそれ以外で検索する
-        for param_string in cfg['search_params']:
-            # パラメータ文字列の日付部分を置換する
-            _param = re.sub('_SEARCHPARAM_', param_string, param_day_string)
-            _param = re.sub('_TODAYSTRING_', _today, _param)
-            _param = re.sub('_DATESTRING_', _day, _param)
-            # URLを生成する
-            search_url =  cfg['day_search_url'] + _param
-            #print(search_url)
-            # 指定年月日を指定した検索リクエストを送信する
-            res = requests.get(search_url, headers=headers_day, cookies=cookies)
-            #print(f'Response: {res}')
-            #print(res.hiistory)
-            #print(res.text)
-            # 空きコートのリンクを取得する
-            court_link_list = get_court(res, cfg)
-            # 空きコートリンクを使って、空き時間帯とコート名を取得する
-            # 空きコートリンクが空の場合は次の指定年月日に移動する
-            if len(court_link_list) == 0:
-                #print(f'{_day} is empty')
-                continue
-            # dictに空き予約日の要素を追加する
-            if f'{_day}' not in reserves_list:
-                reserves_list[f'{_day}'] = {}
-            #print(reserves_list[f'{date_string}'])
-            for link in court_link_list:
-                # 行頭の ./ykr31103,aspx を削除する
-                search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', link)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        _days_resp = []
+        # 指定年月日のリストから検索するためのURLを生成する
+        for _day in date_list:
+            #print(f'Day: {_day}')
+            # 奈良原公園とそれ以外で検索する
+            for param_string in cfg['search_params']:
+                # パラメータ文字列の日付部分を置換する
+                _param = re.sub('_SEARCHPARAM_', param_string, param_day_string)
+                _param = re.sub('_TODAYSTRING_', _today, _param)
+                _param = re.sub('_DATESTRING_', _day, _param)
+                # URLを生成する
+                search_url =  cfg['day_search_url'] + _param
                 #print(search_url)
-                # 指定年月日の空きコートリンクのGETリクエストを送信する
-                res_court = requests.get(search_url, headers=headers_court, cookies=cookies)
-                #print(f'Resp: {res_court}')
-                #print(res_court.history)
-                # 指定年月日の時間帯別空きコートのリストを作成する
-                get_empty_time(res_court, cfg, _day, reserves_list)
+                _entity = f'{_day}_{param_string}'
+                # 指定年月日を指定した検索リクエストを送信する
+                #res = requests.get(search_url, headers=headers_day, cookies=cookies)
+                _days_resp.append(executor.submit(get_request_retry, _entity, search_url, headers_day, cookies))
+                #print(f'Response: {res}')
+                #print(res.hiistory)
+                #print(res.text)
+                http_req_num += 1
+                for _resp in as_completed(_days_resp):
+                    # 空きコートのリンクを取得する
+                    res = _resp.result()[1]
+                    court_link_list = get_court(res, cfg)
+                    # 空きコートリンクを使って、空き時間帯とコート名を取得する
+                    # 空きコートリンクが空の場合は次の指定年月日に移動する
+                    if len(court_link_list) == 0:
+                        #print(f'{_day} is empty')
+                        continue
+                    # dictに空き予約日の要素を追加する
+                    if f'{_day}' not in reserves_list:
+                        reserves_list[f'{_day}'] = {}
+                    #print(reserves_list[f'{date_string}'])
+                with ThreadPoolExecutor(max_workers=4) as executor_secound:
+                    _court_resp = []
+                    for link in court_link_list:
+                        # 行頭の ./ykr31103,aspx を削除する
+                        search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', link)
+                        #print(search_url)
+                        # ファイル名として保存するエンティティ名を生成する
+                        name = md5(search_url.encode('utf-8')).hexdigest()
+                        _entity_string = f'{_day}_{name}'
+                        # 指定年月日の空きコートリンクのGETリクエストを送信する
+                        #res_court = get_request_retry(_entity_string, search_url, headers_court, cookies)
+                        _court_resp.append(executor_secound.submit(get_request_retry, _entity_string, search_url, headers_court, cookies))
+                        #print(f'Resp: {res_court}')
+                        #print(res_court.history)
+                        http_req_num += 1
+                    for resp in as_completed(_court_resp):
+                        # マルチスレッドのジョブ結果を格納する
+                        res_court = resp.result()[1]
+                        #print(f'Response: {res_court}')
+                        # 指定年月日の時間帯別空きコートのリストを作成する
+                        get_empty_time(res_court, cfg, _day, reserves_list)
     #retrun court_link_list
     #print(reserves_list)
-    return reserves_list
+    return reserves_list, http_req_num
+
+
+# HTTPリクエストをする
+@reserve_tools.elapsed_time
+def get_request_retry(*args, **kwargs):
+    """
+    並行処理のために外に出して、ステータスコード200以外なら再試行する
+    """
+    _entity = args[0]
+    search_url = args[1]
+    headers = args[2]
+    cookies = args[3]
+    try:
+        res = requests.get(search_url, headers=headers, cookies=cookies, timeout=(6.0, 15.0))
+        # ステータスコード200以外は再試行を3回する
+        max_retry = 3
+        _retry = 0
+        while _retry < max_retry:
+            if res.status_code != 200:
+                sleep(1)
+                res = requests.post(search_url, headers=headers, cookies=cookies, timeout=(6.0, 15.0))
+                _retry += 1
+                print(f'get request faild count: {_retry}')
+            else:
+                #print(f'success get request: {_entity}')
+                break
+        else:
+            print(f'faild get request: {_entity}')
+    except Timeout:
+        print(f'get request timeout: {_entity}')
+    else:
+        #print(f'{res.headers}')
+        #print(dir(res))
+        # デバッグ用としてhtmlファイルとして保存する
+        #_file_name = f'result_{_entity}.html'
+        #print(_file_name)
+        #_file = reserve_tools.save_html_to_filename(res, _file_name)
+        return _entity, res
+
 
 # 指定した年月日の空き予約結果ページから空き予約のコートを取得する
+#@reserve_tools.elapsed_time
 def get_court(response, cfg):
     """
     年月日指定の空き予約検索結果ページから空きコートのリンクを取得する
@@ -185,6 +254,7 @@ def get_court(response, cfg):
     return court_link_list
 
 # 指定した年月日のコート空き予約ページから空き予約の時間帯を取得する
+#@reserve_tools.elapsed_time
 def get_empty_time(response, cfg, day, reserves_list):
     """
     空き予約の時間帯を取得する
@@ -238,6 +308,8 @@ def main():
     """
     メインルーチン
     """
+    # HTTPリクエスト数
+    http_req_num = 0
     # LINEのメッセージサイズの上限
     #line_max_message_size = 1000
     # ファイル
@@ -266,7 +338,7 @@ def main():
     ( cookies, form_data ) = get_cookie(cfg)
     # 空き予約検索を開始する
     ## 指定年月日を指定して、空きコートのリンクを取得する
-    reserves_list = get_empty_reserves(cfg, date_list, reserves_list, cookies)
+    (reserves_list, http_req_num ) = get_empty_reserves(cfg, date_list, reserves_list, cookies, http_req_num)
 
     # LINEにメッセージを送信する
     ## メッセージ本体を作成する
@@ -274,6 +346,8 @@ def main():
     ## LINEに空き予約情報を送信する
     reserve_tools.send_line_notify(message_bodies, cfg)
 
+    # デバッグ用(HTTPリクエスト回数を表示する)
+    print(f'HTTP リクエスト数: {http_req_num} 回数')
     exit()
     
 if __name__ == '__main__':
