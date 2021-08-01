@@ -136,9 +136,7 @@ def get_empty_reserves(cfg, date_list, reserves_list, cookies):
                 get_empty_time(res_court, cfg, _day, reserves_list)
     #retrun court_link_list
     #print(reserves_list)
-    #return reserves_list
-    return None
-
+    return reserves_list
 
 # 指定した年月日の空き予約結果ページから空き予約のコートを取得する
 def get_court(response, cfg):
