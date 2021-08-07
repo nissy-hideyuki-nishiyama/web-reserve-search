@@ -74,7 +74,9 @@ def check_new_year(month):
     入力された月を見て、これが現在の月よりも小さい場合、年越し処理として
     新しい年を戻り値として返す
     """
-    _now = datetime.datetime.now()
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    _now = datetime.datetime.now(JST)
     _this_year = _now.year
     _this_month = _now.month
     _today = _now.day
@@ -92,6 +94,8 @@ def create_month_list(cfg):
     今日の日付を取得し、当月、翌月のリストを作成する
 
     """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
     # ふれあいネットの検索期間および起点日の設定
     month_num = cfg['month_period']
     start_day = cfg['start_day']
@@ -101,7 +105,7 @@ def create_month_list(cfg):
     month_period = cfg['month_period']
     start_day = cfg['start_day']
     # 現在の時刻を取得し、検索対象月を取得する
-    _now = datetime.datetime.now()
+    _now = datetime.datetime.now(JST)
     _start_num = _now.month - 1
     # 予約開始日以降の場合は検索対象月を増やす
     if _now.day >= start_day:
@@ -124,6 +128,8 @@ def create_day_list(month, public_holiday, cfg):
     検索対象月の土曜日・日曜日の日にちのリストを作成する
     当月の場合は今日以降の日にちのリストとする
     """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
     # 希望曜日リストを作成する
     selected_weekdays = cfg['want_weekdays']
     # 祝日以外の希望日リストを作成する
@@ -139,8 +145,8 @@ def create_day_list(month, public_holiday, cfg):
     # 曜日比較で使う定数(ref_day)を変える
     # 当月なら今日の日付
     # それ以外なら0
-    if month ==  datetime.datetime.now().month:
-        _ref_day = datetime.datetime.now().day
+    if month ==  datetime.datetime.now(JST).month:
+        _ref_day = datetime.datetime.now(JST).day
     else:
         _ref_day = 0
     # 選択された曜日の日にちのリストを作成する
@@ -317,7 +323,7 @@ def create_message_body(reserves_list, message_bodies, cfg):
                 _body_date = f'{_body_date}{_time}\n'
                 #print(_time)
                 #print(_court_list)
-                for _court in _court_list:
+                for _court in sorted(_court_list):
                     _body = f'{_body}　{_court}\n'
                     #print(_court)
     # メッセージ本体の文字数を1000文字以内にする
@@ -366,13 +372,13 @@ def elapsed_time(f):
     """
     関数の処理時間を計測する
     """
-    print(f"call elapsed_time.")
+    #print(f"call elapsed_time.")
     @wraps(f)
     def wrapper(*args, **kwargs):
         start = time.time()
         #print(f"start: {start}")
         v = f(*args, **kwargs)
-        print(f"{f.__name__}: {time.time() - start}")
+        print(f"{f.__name__}: {time.time() - start} sec")
         return v
     return wrapper
 

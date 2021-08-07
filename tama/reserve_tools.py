@@ -3,7 +3,6 @@
 from time import sleep
 import math
 import datetime
-#from datetime import datetime, timedelta, timezone
 import calendar
 
 ## ファイルIO、ディレクトリ関連
@@ -58,9 +57,15 @@ def save_html_file(response):
 # requestsメソッドのレスポンスをHTMLファイルを保存する
 def save_html_to_filename(response, filename):
     html = response.text
-    print(f'save html file: {filename}')
+    #print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(html)
+
+# aiohttp.requestsメソッドのレスポンスをHTMLファイルを保存する
+def save_html_to_filename_for_aiohttp(response, filename):
+    print(f'save html file: {filename}')
+    with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
+        f.write(response)
 
 # 年越し処理
 def check_new_year(month):
@@ -71,7 +76,6 @@ def check_new_year(month):
     """
     # タイムゾーンを設定する
     JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
-    #_now = datetime.datetime.now()
     _now = datetime.datetime.now(JST)
     _this_year = _now.year
     _this_month = _now.month
@@ -101,7 +105,6 @@ def create_month_list(cfg):
     month_period = cfg['month_period']
     start_day = cfg['start_day']
     # 現在の時刻を取得し、検索対象月を取得する
-    #_now = datetime.datetime.now()
     _now = datetime.datetime.now(JST)
     _start_num = _now.month - 1
     # 予約開始日以降の場合は検索対象月を増やす
@@ -142,8 +145,6 @@ def create_day_list(month, public_holiday, cfg):
     # 曜日比較で使う定数(ref_day)を変える
     # 当月なら今日の日付
     # それ以外なら0
-    #if month ==  datetime.datetime.now().month:
-    #    _ref_day = datetime.datetime.now().day
     if month ==  datetime.datetime.now(JST).month:
         _ref_day = datetime.datetime.now(JST).day
     else:
@@ -322,7 +323,6 @@ def create_message_body(reserves_list, message_bodies, cfg):
                 _body_date = f'{_body_date}{_time}\n'
                 #print(_time)
                 #print(_court_list)
-                #for _court in sorted((_court_list)):
                 for _court in sorted(_court_list):
                     _body = f'{_body}　{_court}\n'
                     #print(_court)
@@ -378,9 +378,7 @@ def elapsed_time(f):
         start = time.time()
         #print(f"start: {start}")
         v = f(*args, **kwargs)
-        print(f'')
         print(f"{f.__name__}: {time.time() - start} sec")
-        print(f'')
         return v
     return wrapper
 
