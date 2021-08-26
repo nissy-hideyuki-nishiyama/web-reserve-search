@@ -1295,10 +1295,13 @@ def main():
                     else:
                         # 次の時間帯に進む
                         print(f'found {_time} in target reserves list. therefore next time.')
-                        continue
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
     # 希望日+希望時間帯のリストを出力する
     print(f'target_reserves_list: {target_reserves_list}')
-    #exit()
     # ログインIDを使ってログインし、事前準備をする
     ( cookies, headers, response ) = prepare_reserve(cfg)
     # マイページから既存予約情報を取得する
@@ -1310,13 +1313,14 @@ def main():
     if reserved_num < int(cfg['reserved_limit']):
         print(f'reserve proccess starting')
     else:
-        print(f'reserved number is limit over {cfg["reserved_limit"]}')
+        print(f'reserved number is limit of {cfg["reserved_limit"]}. therefore stop do reserve.')
         return None
     #exit()
     # 利用日時から探すをクリックして、検索画面に移動する
     response = go_to_search_date_menu_with_userid(cfg, cookies, headers)
     ## フォームデータを取得する
     form_data = get_formdata_rsvDateSearch(response)
+    # 希望日+希望時間帯のリストを元に空き予約を探し、予約処理を行う
     for _date, _time_list in target_reserves_list.items():
         for _time in _time_list:
             # 既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
