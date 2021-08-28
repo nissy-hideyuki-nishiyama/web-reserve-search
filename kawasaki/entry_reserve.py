@@ -28,6 +28,9 @@ from pathlib import Path
 # ツールライブラリを読み込む
 import reserve_tools
 
+# 検索結果ページの表示件数
+page_unit = 5
+
 # HTTPリクエスト回数
 http_req_num = 0
 
@@ -414,7 +417,6 @@ def do_reserves_from_datesearch(cfg, cookies, form_data, date, time):
     _file_name = f'result_{_datetime_string}.html'
     _file = reserve_tools.save_html_to_filename(response, _file_name)
     # 次のリクエストでレスポンスヘッダーのLocationの値をRefererとして使うため、これを取得する
-    #_location_url = response.history[0].url
     _location_url = response.url
     #print(f'Location Url: {_location_url}')
     headers['Referer'] = f'{_location_url}'
@@ -469,13 +471,6 @@ def get_formdata_rsvEmptyState(response):
     """
     ページからフォームデータと空きコート施設名とコート名を取得する
     """
-    # ファイルを読み込む
-    #with open(filename, mode="r", encoding="UTF-8") as f:
-    #    _html = f.read()
-    #print(_html)
-    # デバッグ用としてhtmlファイルとして保存する
-    #_file_name = reserve_tools.save_html_file(response)
-    #print(f'save file: {_file_name}')
     # フォームデータ(dict型)を初期化する
     _form_data = {}
     # html解析
@@ -521,28 +516,61 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
     """
     入力パラメータのフォームデータと空きコートリストから、カート追加済みのフォームデータを作成する
     """
-    #print(type(court_list))
-    #print(court_list)
-    # 希望施設リストを取得する
     global http_req_num
+    global page_unit
+    # 空きコートと希望コートが一致したフラッグ
+    # これがTrueの場合、次のページの検索はしない
+    _matched = False
+    # 希望施設リストを取得する
     want_location_list = cfg['want_location_list']
-    # 希望施設リストとコートリストを比較する
-    for _want_location in want_location_list:
-        # 空きコートリストは逆順で辿る
-        for _court in reversed(court_list):
-            _location = _court.split(sep='／')[0]
-            if _want_location == _location:
-                # 一致したコートに対するコートリストのindex番号を取得する
-                _want_index = court_list.index(_court)
-                print(f'matched {_court} : court_index: {_want_index}')
+    # 最初の5件の空き予約件数と現在のオフセット値を取得する。
+    # while文以降ではこれがsearch_next_empty_reserves_from_emptystate() で取得したフォームの値から取得する
+    _allcount = int(form_data['layoutChildBody:childForm:allCount'])
+    _offset = int(form_data['layoutChildBody:childForm:offset'])
+    # 空き予約件数の最後まで確認する
+    while _offset < _allcount:
+        # 新たに発見した空き予約件数と現在のオフセット値を取得する
+        _allcount = int(form_data['layoutChildBody:childForm:allCount'])
+        _offset = int(form_data['layoutChildBody:childForm:offset'])
+        # 希望施設リストとコートリストを比較する
+        for _want_location in want_location_list:
+            # 空きコートリストは逆順で辿る
+            for _court in reversed(court_list):
+                _location = _court.split(sep='／')[0]
+                print(f'want location : {_want_location}')
+                print(f'found court name: {_court}')
+                if _want_location == _location:
+                    # 一致したコートに対するコートリストのindex番号を取得する
+                    _want_index = court_list.index(_court)
+                    # 次ページ検索フラッグをTrueにする
+                    _matched = True
+                    # whileループを抜けるため、_offsetを_allcountより大きくする
+                    _offset = _allcount + page_unit
+                    print(f'matched {_court} : court_index: {_want_index}')
+                    break
+        if _matched == False:
+            # フォームデータのoffset値に5を追加して、次の予約を取得するため、POSTする
+            _offset += page_unit
+            # _offset値が_allcountを超えたら検索をwhileループを抜ける
+            if _offset > _allcount:
                 break
-    # 希望好き空きコートのインデっクス値に変更する
+            # 一致したコートがない場合は次の空き予約ページに進む
+            print(f'not found want court. next empty court page.')
+            form_data['layoutChildBody:childForm:offset'] = str(_offset)
+            response = search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data)
+            # 取得したレスポンスのフォームデータを取得する
+            ( form_data, court_list ) = get_formdata_rsvEmptyState(response)
+    # 希望する空きコートが見つからなかった場合はreturnする
+    if _matched == False:
+        print(f'not found want date time location. therefore this sript finished')
+        exit()
+    # 希望する空きコートのインデっクス値に変更する
     form_data['layoutChildBody:childForm:itemindex'] = f'{_want_index}'
     # 希望する空きコートと時間帯のチェックボックスをクリックした値に変更する
     index_string_sel = f'layoutChildBody:childForm:rsvEmptyStateItems:{_want_index}:emptyStateItemsItems:0:emptyStateItems:{tzone_index}:sel'
     form_data[f'{index_string_sel}'] = '1'
     # 不要なフォームデータを削除する
-    ## 「予約カートに追加」な不要なコート分を削除する
+    ## 「予約カートに追加」で不要なコート分を削除する
     for _index in range(len(court_list)):
         # 希望するコート以外は値を削除する
         if _index != _want_index:
@@ -559,6 +587,46 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
     http_req_num += 1
     # レスポンスを返す
     return response, _court
+
+## 空き予約が5件以上存在したので、6件目以降を利用日時ページに検索データを入力して検索する
+#@reserve_tools.elapsed_time
+def search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data):
+    """
+    利用日時と利用目的、地域を入力して空き予約を検索する
+    """
+    global http_req_num
+    global page_unit
+    # フォームデータから年月日と開始時間を取得する
+    datetime = []
+    datetime.append(str(form_data['layoutChildBody:childForm:year']))
+    datetime.append(str(form_data['layoutChildBody:childForm:month']))
+    datetime.append(str(form_data['layoutChildBody:childForm:day']))
+    datetime.append(str(form_data['layoutChildBody:childForm:stime']))
+    datetime.append(str(form_data['layoutChildBody:childForm:offset']))
+    # フォームデータを変更する
+    # doPagerの値をsubmitに変更する
+    form_data['layoutChildBody:childForm:doPager'] = 'submit'
+    # 不要なフォームデータを削除する
+    ## 「予約カートに追加」を削除する
+    for _index in range(page_unit - 1):
+        index_string_doAddCart = f'layoutChildBody:childForm:rsvEmptyStateItems:{_index}:doAddCart'
+        #print(f'delete formdata: {index_string_doAddCart}')
+        del form_data[f'{index_string_doAddCart}']
+    # 「予約カートの内容を確認」を削除する
+    del form_data['layoutChildBody:childForm:jumpRsvCartList']
+    #print(form_data)
+    # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
+    params = urllib.parse.urlencode(form_data)
+    # フォームデータを使って、空き予約を検索する
+    response = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
+    http_req_num += 1
+    # デバッグ用としてhtmlファイルとして保存する
+    _datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2)
+    _file_name = f'result_{_datetime_string}.html'
+    #print(_file_name)
+    _file = reserve_tools.save_html_to_filename(response, _file_name)
+    # レスポンスを返す
+    return response
 
 ## 「予約カートの内容を確認」ボタンをクリックして、予約カートを表示する
 @reserve_tools.elapsed_time
@@ -834,7 +902,7 @@ def main():
     ## フォームデータを取得する
     form_data = get_formdata_rsvDateSearch(response)
     # 利用日時を入力して空きコート予約を検索する
-    ( reserved_number, reserve ) = do_reserves_from_datesearch(cfg, cookies, form_data, "20210928", "14:00-16:00")
+    ( reserved_number, reserve ) = do_reserves_from_datesearch(cfg, cookies, form_data, "20210928", "12:00-14:00")
     # 予約できなかった場合はreturn を返す
     if reserved_number is None:
         print(f'could not do reseve: {reserve}')
