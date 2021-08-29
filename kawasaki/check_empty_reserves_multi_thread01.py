@@ -94,7 +94,7 @@ def create_datetime_list(target_months_list, public_holiday, cfg):
                 _input_datetime_list = [ _year, _month, _day, _shour, _min, _ehour, _min ]
                 # 2次元配列として、要素を追加する
                 datetime_list.append(_input_datetime_list)
-    print(datetime_list)
+    print(f'search_day_list: {datetime_list}')
     return datetime_list
 
 # 並列処理をするための関数
@@ -577,7 +577,7 @@ def main(threads=5):
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg2.json')
+    cfg = reserve_tools.read_json_cfg('cfg3.json')
     # 検索リストを作成する
     #page = 0
     #is_empty = 'False'
@@ -585,7 +585,9 @@ def main(threads=5):
     target_months_list = reserve_tools.create_month_list(cfg)
     # 検索年月日時間を取得する
     datetime_list = create_datetime_list(target_months_list, public_holiday, cfg)
-    #exit()
+    # 予約希望日リストを取得する
+    want_days_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg)
+    exit()
     # cookieの取得
     #( cookies, response ) = get_cookie_request(cfg)
     # 利用日時検索ページに移動する
