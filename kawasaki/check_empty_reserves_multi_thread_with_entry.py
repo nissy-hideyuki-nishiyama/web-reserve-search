@@ -49,7 +49,7 @@ threads = 5
 # システムエラーにより空き予約ページを取得できない検索対象年月日を保存するリスト
 retry_datetime_list = []
 
-# 予約時間帯のリストを作成する
+# 予約時間帯のリストを作成する。フォームデータのHTML解析でindex番号として使う
 tzone = [ 9, 12, 14, 16, 18 ]
 
 # 年月日時分の入力リストを作成する
@@ -803,46 +803,49 @@ def do_reserves_from_datesearch(cfg, cookies, form_data, date, time):
     _datetime_string = str(_datetime[0]) + str(_datetime[1]).zfill(2) + str(_datetime[2]).zfill(2) + str(_datetime[3]).zfill(2) + str(_datetime[4]).zfill(2)
     _file_name = f'result_{_datetime_string}.html'
     _file = reserve_tools.save_html_to_filename(response, _file_name)
-    # 次のリクエストでレスポンスヘッダーのLocationの値をRefererとして使うため、これを取得する
-    #_location_url = response.history[0].url
+    # 次のリクエストでレスポンスヘッダーのURLの値をRefererとして使うため、これを取得する
     _location_url = response.url
-    #print(f'Location Url: {_location_url}')
     headers['Referer'] = f'{_location_url}'
     # 空き予約コートページのフォームデータと空き施設名、空きコート名を取得する
     ( rsv_form_data, court_list ) = get_formdata_rsvEmptyState(response)
     # 空き予約を予約カートに追加し、フォームデータと追加した空き施設名と空きコート名を取得する
-    ( added_response, court ) = add_reserve_to_cart(cfg, cookies, headers, rsv_form_data, court_list, tzone_index)
+    ( added_response, court, matched_flag ) = add_reserve_to_cart(cfg, cookies, headers, rsv_form_data, court_list, tzone_index)
+    # 空き予約コートが希望日・時間帯・施設名に一致したフラッグを確認し、False(一致しない)ならreturnを返す
+    if matched_flag == False:
+        reserved_number = None
+        reserve = None
+        return reserved_number, reserve
     # デバッグ用としてhtmlファイルとして保存する
     _file_name = f'result_add_reserve_{_datetime_string}.html'
-    _file = reserve_tools.save_html_to_filename(added_response, _file_name)
+    reserve_tools.save_html_to_filename(added_response, _file_name)
     # 予約をカートに追加済みのフォームデータを取得する
-    ( added_form_data, added_court_list ) = get_formdata_rsvEmptyState(added_response)
+    ( added_form_data, court_list ) = get_formdata_rsvEmptyState(added_response)
     # 予約カートの内容を確認する
     cart_response = display_reserve_cart(cfg, cookies, headers, added_form_data, court_list)
     # デバッグ用としてhtmlファイルとして保存する
     _file_name = f'result_cart_reserve_{_datetime_string}.html'
-    _file = reserve_tools.save_html_to_filename(cart_response, _file_name)
+    reserve_tools.save_html_to_filename(cart_response, _file_name)
     # 予約カートのフォームを取得する
     cart_form_data = get_formdata_rsvCartList(cart_response)
     # 「予約確定の手続きへ」ボタンをクリックして、予約確定の手続きをする
     reserve_response = doing_reserve(cfg, cookies, headers, cart_form_data)
     # デバッグ用としてhtmlファイルとして保存する
     _file_name = f'result_do_reserve_{_datetime_string}.html'
-    _file = reserve_tools.save_html_to_filename(reserve_response, _file_name)
+    reserve_tools.save_html_to_filename(reserve_response, _file_name)
     # 予約施設の確認内容のフォームデータを取得する
     reserve_form_data = get_formdata_rsvCartDetails(reserve_response)
     # 「予約内容を確認する」ボタンをクリックする
     input_response = input_reserve(cfg, cookies, headers, reserve_form_data)
     # デバッグ用としてhtmlファイルとして保存する
     _file_name = f'result_input_reserve_{_datetime_string}.html'
-    _file = reserve_tools.save_html_to_filename(input_response, _file_name)
+    reserve_tools.save_html_to_filename(input_response, _file_name)
     # フォームデータを取得する
     confirm_form_data = get_formdata_rsvCartInputDetailsConfirm(input_response)
     # 「予約確定」ボタンをクリックする
     confirm_response = confirm_reserve(cfg, cookies, headers, confirm_form_data)
     # デバッグ用としてhtmlファイルとして保存する
     _file_name = f'result_confirm_reserve_{_datetime_string}.html'
-    _file = reserve_tools.save_html_to_filename(confirm_response, _file_name)
+    reserve_tools.save_html_to_filename(confirm_response, _file_name)
     # 予約番号を取得する
     ( reserved_number_form_data, reserved_number ) = get_confirmed_reserve_number(confirm_response)
     # 予約した年月日と時間をキー、空き施設名／コート名を値としたdictを作成する
@@ -911,28 +914,63 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
     """
     入力パラメータのフォームデータと空きコートリストから、カート追加済みのフォームデータを作成する
     """
-    #print(type(court_list))
-    #print(court_list)
-    # 希望施設リストを取得する
     global http_req_num
+    global page_unit
+    # 空きコートと希望コートが一致したフラッグ
+    # これがTrueの場合、次のページの検索はしない
+    _matched = False
+    # 希望施設リストを取得する
     want_location_list = cfg['want_location_list']
-    # 希望施設リストとコートリストを比較する
-    for _want_location in want_location_list:
-        # 空きコートリストは逆順で辿る
-        for _court in reversed(court_list):
-            _location = _court.split(sep='／')[0]
-            if _want_location == _location:
-                # 一致したコートに対するコートリストのindex番号を取得する
-                _want_index = court_list.index(_court)
-                print(f'matched {_court} : court_index: {_want_index}')
+    # 最初の5件の空き予約件数と現在のオフセット値を取得する。
+    # while文以降ではこれがsearch_next_empty_reserves_from_emptystate() で取得したフォームの値から取得する
+    _allcount = int(form_data['layoutChildBody:childForm:allCount'])
+    _offset = int(form_data['layoutChildBody:childForm:offset'])
+    # 空き予約件数の最後まで確認する
+    while _offset < _allcount:
+        # 新たに発見した空き予約件数と現在のオフセット値を取得する
+        _allcount = int(form_data['layoutChildBody:childForm:allCount'])
+        _offset = int(form_data['layoutChildBody:childForm:offset'])
+        # 希望施設リストとコートリストを比較する
+        for _want_location in want_location_list:
+            # 空きコートリストは逆順で辿る
+            for _court in reversed(court_list):
+                _location = _court.split(sep='／')[0]
+                #print(f'want location : {_want_location}')
+                #print(f'found court name: {_court}')
+                if _want_location == _location:
+                    # 一致したコートに対するコートリストのindex番号を取得する
+                    _want_index = court_list.index(_court)
+                    # 次ページ検索フラッグをTrueにする
+                    _matched = True
+                    # whileループを抜けるため、_offsetを_allcountより大きくする
+                    _offset = _allcount + page_unit
+                    print(f'matched {_court} : court_index: {_want_index}')
+                    break
+        if _matched == False:
+            # フォームデータのoffset値に5を追加して、次の予約を取得するため、POSTする
+            _offset += page_unit
+            # _offset値が_allcountを超えたら検索をwhileループを抜ける
+            if _offset > _allcount:
                 break
-    # 希望好き空きコートのインデっクス値に変更する
+            # 一致したコートがない場合は次の空き予約ページに進む
+            print(f'not found want court. next empty court page.')
+            form_data['layoutChildBody:childForm:offset'] = str(_offset)
+            response = search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data)
+            # 取得したレスポンスのフォームデータを取得する
+            ( form_data, court_list ) = get_formdata_rsvEmptyState(response)
+    # 希望する空きコートが見つからなかった場合はreturnする
+    if _matched == False:
+        print(f'not found want date time location. therefore this sript is finished')
+        response = None
+        return response, _court, _matched
+    # 予約カートに希望コートを追加する処理を開始する
+    # 希望する空きコートのインデっクス値に変更する
     form_data['layoutChildBody:childForm:itemindex'] = f'{_want_index}'
     # 希望する空きコートと時間帯のチェックボックスをクリックした値に変更する
     index_string_sel = f'layoutChildBody:childForm:rsvEmptyStateItems:{_want_index}:emptyStateItemsItems:0:emptyStateItems:{tzone_index}:sel'
     form_data[f'{index_string_sel}'] = '1'
     # 不要なフォームデータを削除する
-    ## 「予約カートに追加」な不要なコート分を削除する
+    ## 「予約カートに追加」で不要なコート分を削除する
     for _index in range(len(court_list)):
         # 希望するコート以外は値を削除する
         if _index != _want_index:
@@ -948,7 +986,47 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
     response = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
     http_req_num += 1
     # レスポンスを返す
-    return response, _court
+    return response, _court, _matched
+
+## 空き予約が5件以上存在したので、6件目以降を利用日時ページに検索データを入力して検索する
+#@reserve_tools.elapsed_time
+def search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data):
+    """
+    利用日時と利用目的、地域を入力して空き予約を検索する
+    """
+    global http_req_num
+    global page_unit
+    # フォームデータから年月日と開始時間を取得する
+    datetime = []
+    datetime.append(str(form_data['layoutChildBody:childForm:year']))
+    datetime.append(str(form_data['layoutChildBody:childForm:month']))
+    datetime.append(str(form_data['layoutChildBody:childForm:day']))
+    datetime.append(str(form_data['layoutChildBody:childForm:stime']))
+    datetime.append(str(form_data['layoutChildBody:childForm:offset']))
+    # フォームデータを変更する
+    # doPagerの値をsubmitに変更する
+    form_data['layoutChildBody:childForm:doPager'] = 'submit'
+    # 不要なフォームデータを削除する
+    ## 「予約カートに追加」を削除する
+    for _index in range(page_unit - 1):
+        index_string_doAddCart = f'layoutChildBody:childForm:rsvEmptyStateItems:{_index}:doAddCart'
+        #print(f'delete formdata: {index_string_doAddCart}')
+        del form_data[f'{index_string_doAddCart}']
+    # 「予約カートの内容を確認」を削除する
+    del form_data['layoutChildBody:childForm:jumpRsvCartList']
+    #print(form_data)
+    # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
+    params = urllib.parse.urlencode(form_data)
+    # フォームデータを使って、空き予約を検索する
+    response = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
+    http_req_num += 1
+    # デバッグ用としてhtmlファイルとして保存する
+    _datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2)
+    _file_name = f'result_{_datetime_string}.html'
+    #print(_file_name)
+    _file = reserve_tools.save_html_to_filename(response, _file_name)
+    # レスポンスを返す
+    return response
 
 ## 「予約カートの内容を確認」ボタンをクリックして、予約カートを表示する
 @reserve_tools.elapsed_time
@@ -1196,6 +1274,55 @@ def sort_reserves_list(reserves_list):
     print(json.dumps(sorted_reserves_list, indent=2, ensure_ascii=False))
     return sorted_reserves_list
 
+## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより、
+def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list):
+    """
+    予約処理対象の希望日、希望時間帯のリストを作成する
+    """
+    # 希望日+希望時間帯のリストを初期化する
+    target_reserves_list = {}
+    # 空き予約リストから、空き予約日と値を取得する
+    for _date, _d_value in reserves_list.items():
+        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
+        if _date not in want_date_list:
+            print(f'not want day: {_date}')
+            continue
+        # 空き予約時間帯とコートリストを取得する
+        for _time, _court_list in _d_value.items():
+            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
+            if _time not in want_hour_list:
+                print(f'not want hour: {_date} {_time}')
+                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
+                #continue
+            for _court in _court_list:
+                # 空きコート名から、施設名とコート名に分割する
+                _location_name = _court.split('／')[0]
+                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
+                if _location_name not in want_location_list:
+                    print(f'not want location: {_date} {_time} {_court}')
+                    continue
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化語、時間帯を追加する
+                if _date not in target_reserves_list:
+                    target_reserves_list[_date] = []
+                    target_reserves_list[_date].append(_time)
+                    print(f'regist target reserves list: {_date} {_time} {_court}')
+                # ある場合は時間帯を追加する
+                else:
+                    # 同じ時間帯がない場合は時間帯は追加する
+                    if _time not in target_reserves_list[_date]:
+                        target_reserves_list[_date].append(_time)
+                        print(f'regist target reserves list: {_date} {_time} {_court}')
+                    else:
+                        # 次の時間帯に進む
+                        print(f'found {_time} in target reserves list. therefore next time.')
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
+    # 希望日+希望時間帯のリストを返す
+    #print(f'{target_reserves_list}')
+    return target_reserves_list
 
 ### メインルーチン ###
 @reserve_tools.elapsed_time
@@ -1253,55 +1380,17 @@ def main():
     want_hour_list = cfg['want_hour_list']
     # 希望施設名を取得する
     want_location_list = cfg['want_location_list']
-    # 空き予約リストが予約希望日であるか確認する
-    # 空き予約リストが希望時間帯であるか確認する
-    # 空き予約リストが希望施設名であるか確認する
     # 予約処理対象の希望日、希望時間帯のリストを作成する
-    # 希望日+希望時間帯のリストを初期化する
-    target_reserves_list = {}
     # 空き予約リストを昇順にソートする
     sorted_reserves_list = sort_reserves_list(threadsafe_list.reserves_list)
-    # 空き予約リストから、空き予約日と値を取得する
-    for _date, _d_value in sorted_reserves_list.items():
-        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
-        if _date not in want_date_list:
-            print(f'not want day: {_date}')
-            continue
-        # 空き予約時間帯とコートリストを取得する
-        for _time, _court_list in _d_value.items():
-            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
-            if _time not in want_hour_list:
-                print(f'not want hour: {_date} {_time}')
-                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
-                #continue
-            for _court in _court_list:
-                # 空きコート名から、施設名とコート名に分割する
-                _location_name = _court.split('／')[0]
-                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
-                if _location_name not in want_location_list:
-                    print(f'not want location: {_date} {_time} {_court}')
-                    continue
-                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化語、時間帯を追加する
-                if _date not in target_reserves_list:
-                    target_reserves_list[_date] = []
-                    target_reserves_list[_date].append(_time)
-                    print(f'regist target reserves list: {_date} {_time} {_court}')
-                # ある場合は時間帯を追加する
-                else:
-                    # 同じ時間帯がない場合は時間帯は追加する
-                    if _time not in target_reserves_list[_date]:
-                        target_reserves_list[_date].append(_time)
-                        print(f'regist target reserves list: {_date} {_time} {_court}')
-                    else:
-                        # 次の時間帯に進む
-                        print(f'found {_time} in target reserves list. therefore next time.')
-                        # breakでコートのループを抜ける
-                        break
-            else:
-                # _d_valueの次のループに進む
-                continue
+    # 空き予約リストから、空き予約日と時間帯を取得する
+    target_reserves_list = create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     # 希望日+希望時間帯のリストを出力する
     print(f'target_reserves_list: {target_reserves_list}')
+    # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
+    if bool(target_reserves_list) == False:
+        print(f'reserve process stopped. because empty reserves is not wanted.')
+        return None
     # ログインIDを使ってログインし、事前準備をする
     ( cookies, headers, response ) = prepare_reserve(cfg)
     # マイページから既存予約情報を取得する
@@ -1309,7 +1398,7 @@ def main():
     #exit()
     # 既存予約件数を取得する
     reserved_num = get_reserved_num(reserved_list)
-    # 既存予約が予約上限数以上なら予約処理を中止する。
+    # 既存予約が予約上限数以上なら予約処理を中止する
     if reserved_num < int(cfg['reserved_limit']):
         print(f'reserve proccess starting')
     else:
@@ -1323,7 +1412,7 @@ def main():
     # 希望日+希望時間帯のリストを元に空き予約を探し、予約処理を行う
     for _date, _time_list in target_reserves_list.items():
         for _time in _time_list:
-            # 既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
+            # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
             if reserved_num >= int(cfg['reserved_limit']):
                 print(f'reserve number is limit over {cfg["reserved_limit"]}. threfore stop reserve process.')
                 return None
