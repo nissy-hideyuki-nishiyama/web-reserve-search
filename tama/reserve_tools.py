@@ -122,7 +122,7 @@ def create_month_list(cfg):
     #next_year = _now.year + 1
     return target_months
 
-# 検索対象月の土曜日・日曜日・祝日・希望日のリストを作成する
+# 検索対象月の希望曜日・祝日・希望日のリストを作成する
 def create_day_list(month, public_holiday, cfg):
     """
     検索対象月の土曜日・日曜日の日にちのリストを作成する
@@ -170,11 +170,99 @@ def create_day_list(month, public_holiday, cfg):
             # 今日の日付より大きいなら追加する
             if _want_day > _ref_day:
                 day_list.append(_want_day)
-    # 昇順でソートして日にちのリストを作る
-    target_days = sorted(day_list)
+    # 重複した年月日日時を取り除き、昇順でソートして日にちのリストを作る
+    target_days = sorted(list(set(day_list)))
     #print(target_days)
     return target_days
 
+# 指定月に対して予約する希望日リストを作成する
+def create_want_day_list(month, public_holiday, cfg):
+    """
+    希望遅延日を計算の上、希望検索対象月の土曜日・日曜日の日にちのリストを作成する
+    当月の場合は今日以降の日にちのリストとする
+    """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 希望曜日リストを作成する
+    selected_weekdays = cfg['want_weekdays']
+    # 祝日以外の希望日リストを作成する
+    want_month_days = cfg['want_month_days'][str(month)]
+    # 除外日リストを作成する
+    exclude_month_days = cfg['exclude_month_days'][str(month)]
+    # 希望遅延日を取得する
+    days_later = int(cfg['days_later'])
+    # 年越し確認をする
+    year = check_new_year(month)
+    # 対象日を格納するリストを初期化する
+    day_list=[]
+    # 対象月の初日の曜日と最終日とを取得する
+    ( first_weekday , last_day ) = calendar.monthrange( year, month )
+    #print(f'{first_weekday}, {last_day}')
+    # 今日から希望X日後の日付を取得する
+    after_date = datetime.datetime.now(JST) + datetime.timedelta(days=days_later)
+    after_month = after_date.month
+    after_day = after_date.day
+    # 月の処理
+    # X日後の月が指定月より大きい場合
+    if month < after_month:
+        return day_list
+    # X日後の月が指定月と同じ場合
+    elif month == after_month:
+        _ref_day = after_day
+    # X日後の月が指定月より小さい場合
+    else:
+        _ref_day = 0
+    # 選択された曜日の日にちのリストを作成する
+    for _wday in selected_weekdays:
+        _day = _wday - first_weekday + 1
+        while _day <= last_day:
+            if _day > _ref_day:
+                day_list.append(_day)
+            _day += 7
+    # 祝日の日をリストに追加する
+    # 該当月の祝日が空なら追加しない
+    if public_holiday[month]:
+        for _holiday in public_holiday[month]:
+            # 今日の日付より大きいなら追加する
+            if _holiday > _ref_day:
+                day_list.append(_holiday)
+    # 希望対象日をリストに追加する
+    # 該当月の希望対象日が空なら追加しない
+    if want_month_days:
+        for _want_day in want_month_days:
+            # 今日の日付より大きいなら追加する
+            if _want_day > _ref_day:
+                day_list.append(_want_day)
+    # 重複した年月日日時を取り除き、昇順でソートして日にちのリストを作る
+    target_days = sorted(list(set(day_list)))
+    # 除外日をリストから削除する
+    if exclude_month_days:
+        for _exclude_day in exclude_month_days:
+            # 除外日リストが存在した場合、削除する
+            if _exclude_day in target_days:
+                target_days.remove(int(_exclude_day))
+    #print(target_days)
+    return target_days
+
+# 予約希望日リストを作成する
+def create_want_date_list(target_months_list, public_holiday, cfg):
+    """
+    予約希望日(実際に予約アクションをする条件)リストを作成する
+    """
+    want_date_list = []
+    for _month in target_months_list:
+        # 年越し確認
+        _year = check_new_year(_month)
+        # 対象月の希望日リストを作成する
+        want_days_list = create_want_day_list(_month, public_holiday, cfg)
+        for _day in want_days_list:
+            # 文字列YYYYMMDDを作成する
+            _date = str(_year) + str(_month).zfill(2) + str(_day).zfill(2)
+            want_date_list.append(_date)
+    print(f'want_date_list: {want_date_list}')
+    return want_date_list
+
+# 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
 def get_weekday_from_datestring(datestring):
     """
     年月日文字列からその日の曜日を取得し、戻り値として返す
@@ -217,7 +305,7 @@ def create_date_list(target_months_list, public_holiday, cfg):
     return date_list
 
 # 調布市向け
-# 監視対象日の年月日リストの2次元配列を作成する
+# 監視対象日の年月日リストの2次元配列([[YYYY, MM, DD], [YYYY, MM, DD], ...])を作成する
 def create_date_list_chofu(target_months_list, public_holiday, cfg):
     """
     ( year, month, day )の配列を作成する
@@ -243,7 +331,7 @@ def create_date_list_chofu(target_months_list, public_holiday, cfg):
     #print(date_list)
     return date_list
 
-# 監視対象年月のリストを作成する
+# 監視対象年月のリスト([[YYYY,MM], [YYYY, MM], ...])を作成する
 def create_year_month_list(target_month_list):
     """
     ( year, month )の配列を作成する
@@ -341,7 +429,6 @@ def create_message_body(reserves_list, message_bodies, cfg):
         print(_message)
     return message_bodies
 
-
 # LINEにメッセージを送信する
 def send_line_notify(message_bodies, cfg):
     """
@@ -365,7 +452,6 @@ def send_line_notify(message_bodies, cfg):
         #data = {'message': f'空き予約はありませんでした'}
         #requests.post(line_notify_api, headers = headers, data = data)
         print(f'not found empty reserves.')
-
 
 # 実行時間を計測する
 def elapsed_time(f):
