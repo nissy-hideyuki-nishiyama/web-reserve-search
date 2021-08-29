@@ -388,7 +388,7 @@ def analize_html(court, html):
     #soup =BeautifulSoup(shtml.read(), "html.parser")
     soup =BeautifulSoup(html, "html.parser")
     # formタグ毎に要素を抽出する
-    elems = soup.find_all("form", action="https://reserve.lan.jp/mtg/web")
+    elems = soup.find_all("form", action="https://reserve.lan.jp/mtg/sp")
     # formタグ範囲内で抽出する
     for _form in elems:
         # formタグ内のname属性(年月日の文字列)を取得する

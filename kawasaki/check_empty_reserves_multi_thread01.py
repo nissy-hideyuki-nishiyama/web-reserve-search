@@ -3,6 +3,7 @@ from time import sleep
 import math
 import datetime
 import calendar
+import time
 
 # ファイルIO、ディレクトリ関連
 import os
@@ -18,6 +19,21 @@ import requests
 # JSONファイルの取り扱い
 import json
 
+# 並列処理モジュール(threading)
+from concurrent.futures import (
+    ThreadPoolExecutor,
+    Future,
+    as_completed,
+    wait
+)
+
+# スレッドロック
+import threading
+
+# URLの'/'が問題になるためハッシュ化する
+from hashlib import md5
+from pathlib import Path
+
 # ツールライブラリを読み込む
 import reserve_tools
 
@@ -27,8 +43,15 @@ import reserve_tools
 
 # 検索結果ページの表示件数
 page_unit = 5
-#page = 0
-#is_empty = 'False'
+
+# HTTPリクエスト回数
+http_req_num = 0
+
+# スレッド数
+threads = 5
+
+# システムエラーにより空き予約ページを取得できない検索対象年月日を保存するリスト
+retry_datetime_list = []
 
 # 年月日時分の入力リストを作成する
 #def create_datetime_list(target_months_list, selected_weekdays):
@@ -57,7 +80,7 @@ def create_datetime_list(target_months_list, public_holiday, cfg):
             for _hour in time_list:
                 # 開始時刻と終了時刻を作成する
                 _shour = _hour
-                # 開始時刻が9時の場合は3時間後とする
+                # 開始時刻が9時の場合は3時間にする
                 if _hour == 9:
                     _ehour = _hour + 3
                 else:
@@ -71,10 +94,66 @@ def create_datetime_list(target_months_list, public_holiday, cfg):
                 _input_datetime_list = [ _year, _month, _day, _shour, _min, _ehour, _min ]
                 # 2次元配列として、要素を追加する
                 datetime_list.append(_input_datetime_list)
-    print(datetime_list)
+    print(f'search_day_list: {datetime_list}')
     return datetime_list
 
+# 並列処理をするための関数
+## 空き予約を検索するために事前処理として、同時実行数分のcookieとフォームデータを取得する
+def multi_thread_prepareproc(cfg, reqdata, threads=1):
+    """
+    threads数分だけ実施する
+    1)cookieを取得する
+    2)利用日時リンクページに接続し、フォームデータを取得する
+    """
+    #print(f'スレッド数: {threads}')
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        futures = [executor.submit(get_cookie_and_formdata, cfg, index) for index in range(threads)]
+        for future in as_completed(futures):
+            #print(future.result())
+            reqdata.append(future.result())
+        #print(type(reqdata))
+        #print(dir(reqdata))
+        return reqdata
+
+## 空き予約を検索する
+def multi_thread_datesearch(cfg, datetime_list, threadsafe_list, reqdata, threads=1):
+    """
+    利用日時ページに利用日時を入力して検索する
+    """
+    # 実行結果を入れるオブジェクトの初期化
+    futures = []
+    #print(f'スレッド数: {threads}')
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        _index = 0
+        for datetime in datetime_list:
+            # スレッド数分だけ取得したcookiesとform_dataのどれを使うか決める
+            th_index = int(_index) % int(threads)
+            future = executor.submit(search_empty_reserves_from_datesearch2, cfg, threadsafe_list, reqdata, datetime, th_index)
+            _index += 1
+            futures.append(future)
+        for future in as_completed(futures):
+            future.result()
+        return threadsafe_list
+
 # クローラー
+## cookieとフォームデータを事前に取得する
+def get_cookie_and_formdata(cfg, index):
+    """
+    cookieとformdataを取得する
+    """
+    #print(f'インデックス: # {index}')
+    # ヘッダーを設定する
+    headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+            }
+    # cookieを取得する
+    (cookies, response) = get_cookie_request(cfg)
+    # フォームデータを取得する
+    response = go_to_search_date_menu(cfg, headers, cookies)
+    #reqdata.append(get_formdata(response))
+    _reqdata = get_formdata(response)
+    return cookies, _reqdata
+
 ## cookieを取得するため、トップページにアクセスする
 def get_cookie_request(cfg):
     """
@@ -83,6 +162,8 @@ def get_cookie_request(cfg):
     # セッションを開始する
     session = requests.session()
     response = session.get(cfg['first_url'])
+    global http_req_num
+    http_req_num += 1
     # cookie情報を初期化し、次回以降のリクエストでrequestsモジュールの渡せる形に整形する
     cookies = {}
     cookies[cfg['cookie_name_01']] = session.cookies.get(cfg['cookie_name_01'])
@@ -96,6 +177,8 @@ def go_to_search_date_menu(cfg, headers, cookies):
     施設の空き状況検索の利用日時からのリンクをクリックして、検索画面に移動する
     """
     res = requests.get(cfg['search_url'], headers=headers, cookies=cookies)
+    global http_req_num
+    http_req_num += 1
     #print(res.text)
     return res
 
@@ -128,11 +211,12 @@ def get_formdata(response):
     # value=の文字列が含まれるので、これを削除してフォームデータに代入する
     _form_data['te-conditions'] = _te_value.group()[7:-1]
     # フォームデータを返す
+    #print(type(_form_data))
     return _form_data
 
 ## 利用日時ページに検索データを入力して検索する
 @reserve_tools.elapsed_time
-def search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list, reserves_list):
+def search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list, reserves_list, http_req_num):
     """
     利用日時と利用目的、地域を入力して空き予約を検索する
     """
@@ -165,20 +249,69 @@ def search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list
         params = urllib.parse.urlencode(form_data)
         # フォームデータを使って、空き予約を検索する
         res = requests.post(cfg['search_url'], headers=headers, cookies=cookies, data=params)
+        http_req_num += 1
         # デバッグ用としてhtmlファイルとして保存する
         #_datetime_string = str(_datetime[0]) + str(_datetime[1]).zfill(2) + str(_datetime[2]).zfill(2) + str(_datetime[3]).zfill(2) + str(_datetime[4]).zfill(2)
         #_file_name = f'result_{_datetime_string}.html'
         #print(_file_name)
         #_file = reserve_tools.save_html_to_filename(res, _file_name)
         # HTML解析を実行して、発見した空き予約を予約リストに追加するする
-        analyze_html(cfg, cookies, _datetime, res, reserves_list)
+        analyze_html(cfg, cookies, _datetime, res, reserves_list, http_req_num)
     # 空き予約リストを返す
-    return reserves_list
-
+    return reserves_list, http_req_num
 
 ## 利用日時ページに検索データを入力して検索する
 @reserve_tools.elapsed_time
-def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res, reserves_list):
+def search_empty_reserves_from_datesearch2(cfg, threadsafe_list, reqdata, datetime, th_index):
+    """
+    利用日時と利用目的、地域を入力して空き予約を検索する
+    """
+    # 直前のリクエストURLからRefererを含んだヘッダーを生成する
+    headers = {
+        'Origin': cfg['origin_url'],
+        'Referer': cfg['search_url'],
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+    }
+    # reqdataからcookieとフォームデータを生成する
+    cookies = dict(reqdata[th_index][0])
+    form_data = dict(reqdata[th_index][1])
+    # 利用目的を取得し、フォームデータに代入する
+    form_data['layoutChildBody:childForm:purpose'] = cfg['selected_purpose']
+    # 検索対象地域を取得、フォームデータに代入する
+    #for _area in cfg['selected_areas']:
+    #    form_data['layoutChildBody:childForm:area'] = cfg['selected_areas']
+    # rsvDateSearchページの検索ボタンの値を代入する
+    form_data['layoutChildBody:childForm:doDateSearch'] = '上記の内容で検索する'
+    # 空き状況カレンダーの日付リンク(doChangeDate, rsvEmptyStateページ)の値を代入する
+    #for _datetime in datetime_list:
+    # フォームデータの検索日時データを生成する
+    form_data['layoutChildBody:childForm:year'] = datetime[0]
+    form_data['layoutChildBody:childForm:month'] = datetime[1]
+    form_data['layoutChildBody:childForm:day'] = datetime[2]
+    form_data['layoutChildBody:childForm:sHour'] = datetime[3]
+    form_data['layoutChildBody:childForm:sMinute'] = datetime[4]
+    form_data['layoutChildBody:childForm:eHour'] = datetime[5]
+    form_data['layoutChildBody:childForm:eMinute'] = datetime[6]
+    #print(form_data)
+    # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
+    params = urllib.parse.urlencode(form_data)
+    # フォームデータを使って、空き予約を検索する
+    res = requests.post(cfg['search_url'], headers=headers, cookies=cookies, data=params)
+    global http_req_num
+    http_req_num += 1
+    # デバッグ用としてhtmlファイルとして保存する
+    #_datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2)
+    #_file_name = f'result_{_datetime_string}.html'
+    #_file = reserve_tools.save_html_to_filename(res, _file_name)
+    # HTML解析を実行して、発見した空き予約を予約リストに追加するする
+    threadsafe_list = analyze_html(cfg, cookies, datetime, res, threadsafe_list)
+    # 空き予約リストを返す
+    return threadsafe_list
+
+## 利用日時ページに検索データを入力して検索する
+@reserve_tools.elapsed_time
+def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res, reserves_list, http_req_num):
     """
     利用日時と利用目的、地域を入力して空き予約を検索する
     """
@@ -209,6 +342,7 @@ def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res
     params = urllib.parse.urlencode(form_data)
     # フォームデータを使って、空き予約を検索する
     res = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
+    http_req_num += 1
     # デバッグ用としてhtmlファイルとして保存する
     #_datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2) +  '01'
     #_file_name = f'result_{_datetime_string}.html'
@@ -216,13 +350,59 @@ def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res
     #_file = reserve_tools.save_html_to_filename(res, _file_name)
     # HTML解析を実行して、発見した空き予約を予約リストに追加するする
     #print(res.text)
-    analyze_html(cfg, cookies, datetime, res, reserves_list)
+    analyze_html(cfg, cookies, datetime, res, reserves_list, http_req_num)
     # 空き予約リストを返す
     return reserves_list
 
+## 利用日時ページに検索データを入力して検索する
+@reserve_tools.elapsed_time
+def search_empty_reserves_from_emptystate2(cfg, cookies, datetime, form_data, res, threadsafe_list):
+    """
+    利用日時と利用目的、地域を入力して空き予約を検索する
+    """
+    # リダイレクトされているか確認する
+    # リダイレクトされている場合はリダイレクト元のレスポンスヘッダのLocationを取得する
+    if res.history:
+        _referer = res.history[-1].headers['Location']
+    else:
+        _referer = cfg['empty_state_url']
+    print(f'referer: {_referer}')
+    # 直前のリクエストURLからRefererを含んだヘッダーを生成する
+    headers = {
+        'Origin': cfg['origin_url'],
+        'Referer': _referer,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+    }
+    # フォームデータを変更する
+    # doPagerの値をsubmitに変更する
+    form_data['layoutChildBody:childForm:doPager'] = 'submit'
+    # 開始時間と終了時間を追加する
+    form_data['layoutChildBody:childForm:stime'] = str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2)
+    form_data['layoutChildBody:childForm:etime'] = str(datetime[5]).zfill(2) + str(datetime[6]).zfill(2)
+    # doChangeDateを削除する
+    #del form_data['layoutChildBody:childForm:doChangeDate']
+    #print(form_data)
+    # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
+    params = urllib.parse.urlencode(form_data)
+    # フォームデータを使って、空き予約を検索する
+    res = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
+    global http_req_num
+    http_req_num += 1
+    # デバッグ用としてhtmlファイルとして保存する
+    #_datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2) +  '01'
+    #_file_name = f'result_{_datetime_string}.html'
+    #print(_file_name)
+    #_file = reserve_tools.save_html_to_filename(res, _file_name)
+    # HTML解析を実行して、発見した空き予約を予約リストに追加するする
+    #print(res.text)
+    threadsafe_list = analyze_html(cfg, cookies, datetime, res, threadsafe_list)
+    # 空き予約リストを返す
+    return threadsafe_list
+
 # 空き予約検索結果ページを解析し、空き予約リストに追加する
 @reserve_tools.elapsed_time
-def analyze_html(cfg, cookies, datetime, res, reserves_list) :
+def analyze_html(cfg, cookies, datetime, res, threadsafe_list) :
     """
     6件目以降の検索のために、空き予約結果ページからフォームデータを取得するとともに、
     空き予約リストに追加する
@@ -234,6 +414,16 @@ def analyze_html(cfg, cookies, datetime, res, reserves_list) :
     # 6件目以降の検索のためのフォームデータを初期化する
     _form_data = {}
     soup =BeautifulSoup(res.text, "html.parser")
+    # システムエラーが発生したか確認し、システムエラーが発生した場合は以降の処理は実施しない
+    # システムエラー時は下記のタグが生成される
+    #//*['form', id="errorForm"]
+    _is_error = soup.find('form', id="errorForm")
+    if _is_error != None:
+        print(f'システムエラーが発生したため、HTML解析をスキップします。')
+        print(f'システムエラーが発生した検索対象年月日時分: {_date} {_time}')
+        global retry_datetime_list
+        retry_datetime_list.append(datetime)
+        return None
     _form = soup.find_all('form')
     # フォームデータ部分を取得する
     # 空き予約件数, 現在のページ数, 検索指定年月日、その他もろもろ
@@ -255,21 +445,20 @@ def analyze_html(cfg, cookies, datetime, res, reserves_list) :
     _empty_count = int(_form_data['layoutChildBody:childForm:allCount'])
     _offset = int(_form_data['layoutChildBody:childForm:offset'])
     # 空き予約リストに追加する
-    reserves_list = get_empty_reserve_name(cfg, datetime, _dataform, reserves_list)
+    threadsafe_list = get_empty_reserve_name(cfg, datetime, _dataform, threadsafe_list)
     # 次の空き予約が存在する場合は次の空き予約ページに移動する
     if _offset + 5 < _empty_count:
         # フォームデータのoffset値に5を追加して、次の予約を参照できるようにする
         _next_offset = _offset + 5
         _form_data['layoutChildBody:childForm:offset'] = str(_next_offset)
-        reserves_list = search_empty_reserves_from_emptystate(cfg, cookies, datetime, _form_data, res, reserves_list)
+        threadsafe_list = search_empty_reserves_from_emptystate2(cfg, cookies, datetime, _form_data, res, threadsafe_list)
     #else:
     #    print(f'go to last empty reserves.')
-    return None
-
+    return threadsafe_list
 
 # 空き予約の施設名とコート名を取得する
 @reserve_tools.elapsed_time
-def get_empty_reserve_name(cfg, datetime, data_form, reserves_list):
+def get_empty_reserve_name(cfg, datetime, data_form, threadsafe_list):
     """
     検索結果ページより空き予約の施設名とコート名を取得する
     """
@@ -299,15 +488,17 @@ def get_empty_reserve_name(cfg, datetime, data_form, reserves_list):
                 _no += 1
                 # 空き予約リストに追加する
                 # 空き予約リストに発見した日がなければ、年月日をキーとして初期化する
-                if _date not in reserves_list:
-                    reserves_list[_date] = {}
-                    reserves_list[_date].setdefault(_time, []).append(_locate_court)
+                # if _date not in reserves_list:
+                #     reserves_list[_date] = {}
+                #     reserves_list[_date].setdefault(_time, []).append(_locate_court)
                 # 空き予約リストに発見した日が登録されていた場合
-                else:
-                    # 空き予約リストに発見した時間帯がなければ、時間をキーとしてリストを初期化する
-                    if _time not in reserves_list[_date]:
-                        reserves_list[_date][_time] = []
-                    reserves_list[_date][_time].append(_locate_court)
+                # else:
+                #     # 空き予約リストに発見した時間帯がなければ、時間をキーとしてリストを初期化する
+                #     if _time not in reserves_list[_date]:
+                #         reserves_list[_date][_time] = []
+                #     reserves_list[_date][_time].append(_locate_court)
+                # スレッドセーフな空き予約リストに追加する
+                threadsafe_list.add_reserves(_date, _time, _locate_court)
             # 除外施設があれば、除外施設と一致するか比較し、一致しなければ登録する
             else:
                 # 除外施設の場合は次に進む
@@ -329,20 +520,39 @@ def get_empty_reserve_name(cfg, datetime, data_form, reserves_list):
                             #print(_locate_court)
                             # 空き予約リストに追加する
                             # 空き予約リストに発見した日がなければ、年月日をキーとして初期化する
-                            if _date not in reserves_list:
-                                reserves_list[_date] = {}
-                                reserves_list[_date].setdefault(_time, []).append(_locate_court)
+                            # if _date not in reserves_list:
+                            #     reserves_list[_date] = {}
+                            #     reserves_list[_date].setdefault(_time, []).append(_locate_court)
                             # 空き予約リストに発見した日が登録されていた場合
-                            else:
-                                # 空き予約リストに発見した時間帯がなければ、時間をキーとしてリストを初期化する
-                                if _time not in reserves_list[_date]:
-                                    reserves_list[_date][_time] = []
-                                reserves_list[_date][_time].append(_locate_court)
-    print(reserves_list)
-    return reserves_list
+                            # else:
+                            #     # 空き予約リストに発見した時間帯がなければ、時間をキーとしてリストを初期化する
+                            #     if _time not in reserves_list[_date]:
+                            #         reserves_list[_date][_time] = []
+                            #     reserves_list[_date][_time].append(_locate_court)
+                            # スレッドセーフな空き予約リストに追加する
+                            threadsafe_list.add_reserves(_date, _time, _locate_court)
+    #print(threadsafe_list)
+    return threadsafe_list
+
+# スレッドセーフな空き予約リスト
+class ThreadSafeReservesList:
+    lock = threading.Lock()
+    def __init__(self):
+        self.reserves_list = {}
+    def add_reserves(self, _date, _time, _locate_court):
+        with self.lock:
+            if _date not in self.reserves_list:
+                self.reserves_list[_date] = {}
+                self.reserves_list[_date].setdefault(_time, []).append(_locate_court)
+            else:
+                if _time not in self.reserves_list[_date]:
+                    self.reserves_list[_date][_time] = []
+                self.reserves_list[_date][_time].append(_locate_court)
+            #print(self.reserves_list)
 
 ### メインルーチン ###
-def main():
+@reserve_tools.elapsed_time
+def main(threads=5):
     """
     メインルーチン
     """
@@ -351,18 +561,23 @@ def main():
     # 入力データの辞書の初期化
     input_data = {}
     # 空き予約の辞書の初期化
-    reserves_list = {}
+    #reserves_list = {}
+    threadsafe_list = ThreadSafeReservesList()
     # 送信メッセージリストの初期化
     message_bodies = []
     # WEBリクエストのヘッダー
     headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
             }
+    # HTTPリクエスト数
+    #http_req_num = 0
+    # HTTPリクエストデータ
+    reqdata = []
     # 処理の開始
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg2.json')
+    cfg = reserve_tools.read_json_cfg('cfg3.json')
     # 検索リストを作成する
     #page = 0
     #is_empty = 'False'
@@ -370,22 +585,47 @@ def main():
     target_months_list = reserve_tools.create_month_list(cfg)
     # 検索年月日時間を取得する
     datetime_list = create_datetime_list(target_months_list, public_holiday, cfg)
-    #exit()
+    # 予約希望日リストを取得する
+    want_days_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg)
+    exit()
     # cookieの取得
-    ( cookies, response ) = get_cookie_request(cfg)
+    #( cookies, response ) = get_cookie_request(cfg)
     # 利用日時検索ページに移動する
-    response = go_to_search_date_menu(cfg, headers, cookies)
+    #response = go_to_search_date_menu(cfg, headers, cookies)
     # フォームデータを取得する
-    form_data = get_formdata(response)
+    #form_data = get_formdata(response)
     # 利用日時検索ページで空き予約を検索する
-    reserves_list = search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list, reserves_list)
+    #( reserves_list, http_req_num ) = search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list, reserves_list, http_req_num)
+    # threadsに応じたcookieとフォームデータを取得する
+    reqdata = multi_thread_prepareproc(cfg, reqdata, threads=5)
+    threadsafe_list = multi_thread_datesearch(cfg, datetime_list, threadsafe_list, reqdata, threads=5)
+    # 1回目で取得できなかった空き予約検索を再実行する
+    ## 再試行リストが0以外なら実行する
+    if len(retry_datetime_list) != 0:
+        print(f'下記の検索年月日時分でシステムエラーが発生したため、再検索します。検索回数は {len(retry_datetime_list)} 回です')
+        print(f'datetime list : {retry_datetime_list}')
+        threadsafe_list = multi_thread_datesearch(cfg, retry_datetime_list, threadsafe_list, reqdata, threads=5)
+    else:
+        print(f'システムエラーは発生しませんでした')
     # 送信メッセージを作成する
-    message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
+    message_bodies = reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg)
     # LINEに送信する
     reserve_tools.send_line_notify(message_bodies, cfg)
-    # プログラウの終了
-    exit()
+    # プログラムの終了
+    #exit()
 
 if __name__ == '__main__':
-    main()
+    # 実行時間を測定する
+    start = time.time()
+    print(f'HTTP リクエスト数 初期化: {http_req_num}')
+    main(threads=5)
+
+    # デバッグ用(HTTPリクエスト回数を表示する)
+    print(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
+    # 実行時間を表示する
+    elapsed_time = time.time() - start
+    print(f'whole() duration time: {elapsed_time} sec')
+
+    exit()
+
 

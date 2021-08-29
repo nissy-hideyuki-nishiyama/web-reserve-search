@@ -1,5 +1,6 @@
 # モジュールの読み込み
 ## HTMLクローラー関連
+from requests.exceptions import Timeout
 import requests
 import urllib
 
@@ -8,9 +9,13 @@ from time import sleep
 import math
 import datetime
 import calendar
+import time
 
 ## ファイルIO、ディレクトリ関連
 import os
+from hashlib import md5
+from pathlib import Path
+
 
 ## HTML解析関連
 from bs4 import BeautifulSoup
@@ -84,7 +89,8 @@ def go_select_searching(cfg, form_data, cookies):
     #res_form_data = get_formdata(res)
 
 # コートの空き予約を検索する
-def get_empty_reserves(cfg, date_list, reserves_list, cookies):
+@reserve_tools.elapsed_time
+def get_empty_reserves(cfg, date_list, reserves_list, cookies, http_req_num):
     """
     指定年月日のリストを引数として、その指定年月日の空き予約を検索する
     """
@@ -94,7 +100,9 @@ def get_empty_reserves(cfg, date_list, reserves_list, cookies):
     # 検索URL用のパラメータ部分のURLを定義する
     param_day_string = '?PSPARAM=Dt::0:1:205::::_TODAYSTRING_:1,2,3,4,5,6,7,10:_DATESTRING_:False:_SEARCHPARAM_:0:0&PYSC=0:1:205::::_TODAYSTRING_:1,2,3,4,5,6,7,10&PYP=:::0:0:0:0:True::False::0:0:0:0::0:0'
     # 今日の年月日を取得する
-    _now = datetime.datetime.now()
+    ## タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    _now = datetime.datetime.now(JST)
     _today = str(_now.year) + str(_now.month).zfill(2) + str(_now.day).zfill(2)
     #print(f'today: {_today}')
     # 指定年月日のリストから検索するためのURLを生成する
@@ -108,13 +116,16 @@ def get_empty_reserves(cfg, date_list, reserves_list, cookies):
             # URLを生成する
             search_url =  cfg['day_search_url'] + _param
             #print(search_url)
+            _entity = f'{_day}_{param_string}'
             # 指定年月日を指定した検索リクエストを送信する
-            res = requests.get(search_url, headers=headers_day, cookies=cookies)
+            #res = requests.get(search_url, headers=headers_day, cookies=cookies)
+            res = get_request_retry(_entity, search_url, headers_day, cookies)
             #print(f'Response: {res}')
             #print(res.hiistory)
             #print(res.text)
+            http_req_num += 1
             # 空きコートのリンクを取得する
-            court_link_list = get_court(res, cfg)
+            court_link_list = get_court(res[1], cfg)
             # 空きコートリンクを使って、空き時間帯とコート名を取得する
             # 空きコートリンクが空の場合は次の指定年月日に移動する
             if len(court_link_list) == 0:
@@ -128,15 +139,62 @@ def get_empty_reserves(cfg, date_list, reserves_list, cookies):
                 # 行頭の ./ykr31103,aspx を削除する
                 search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', link)
                 #print(search_url)
+                # ファイル名として保存するエンティティ名を生成する
+                name = md5(search_url.encode('utf-8')).hexdigest()
+                _entity_string = f'{_day}_{name}'
                 # 指定年月日の空きコートリンクのGETリクエストを送信する
-                res_court = requests.get(search_url, headers=headers_court, cookies=cookies)
+                #res_court = requests.get(search_url, headers=headers_court, cookies=cookies)
+                res_court = get_request_retry(_entity_string, search_url, headers_court, cookies)
                 #print(f'Resp: {res_court}')
                 #print(res_court.history)
+                http_req_num += 1
                 # 指定年月日の時間帯別空きコートのリストを作成する
-                get_empty_time(res_court, cfg, _day, reserves_list)
+                reserves_list = get_empty_time(res_court[1], cfg, _day, reserves_list)
     #retrun court_link_list
-    #print(reserves_list)
-    return reserves_list
+    print(json.dumps(reserves_list, indent=2, ensure_ascii=False))
+    return reserves_list, http_req_num
+
+
+# HTTPリクエストをする
+@reserve_tools.elapsed_time
+def get_request_retry(*args, **kwargs):
+    """
+    並行処理のために外に出して、ステータスコード200以外なら再試行する
+    """
+    _entity = args[0]
+    search_url = args[1]
+    headers = args[2]
+    cookies = args[3]
+    try:
+        res = requests.get(search_url, headers=headers, cookies=cookies, timeout=(6.0, 15.0))
+        # ステータスコード200以外は再試行を3回する
+        max_retry = 3
+        _retry = 0
+        # デバッグ用(HTTPリクエストのカウント)
+        while _retry < max_retry:
+            if res.status_code != 200:
+                sleep(1)
+                res = requests.post(search_url, headers=headers, cookies=cookies, timeout=(6.0, 15.0))
+                _retry += 1
+                print(f'get request faild count: {_retry}')
+            else:
+                #print(f'success get request: {_entity}')
+                break
+        else:
+            print(f'faild get request: {_entity}')
+            res = None
+    except Timeout:
+        print(f'get request timeout: {_entity}')
+        res = None
+    else:
+        #print(f'{res.headers}')
+        #print(dir(res))
+        # デバッグ用としてhtmlファイルとして保存する
+        #_file_name = f'result_{_entity}.html'
+        #print(_file_name)
+        #_file = reserve_tools.save_html_to_filename(res, _file_name)
+        return _entity, res
+
 
 # 指定した年月日の空き予約結果ページから空き予約のコートを取得する
 def get_court(response, cfg):
@@ -228,16 +286,23 @@ def get_empty_time(response, cfg, day, reserves_list):
                     # 空き予約リストに追加する
                     reserves_list[f'{day}'].setdefault(reserve, []).append(court_name)
     #print(reserves_list)
-    return None
+    return reserves_list
+    #return None
 
 
 ## メッセージを送信する
 
 # メインルーチン
+@reserve_tools.elapsed_time
 def main():
     """
     メインルーチン
     """
+    # 実行時間を測定する
+    start = time.time()
+
+    # HTTPリクエスト数
+    http_req_num = 0
     # LINEのメッセージサイズの上限
     #line_max_message_size = 1000
     # ファイル
@@ -266,7 +331,7 @@ def main():
     ( cookies, form_data ) = get_cookie(cfg)
     # 空き予約検索を開始する
     ## 指定年月日を指定して、空きコートのリンクを取得する
-    reserves_list = get_empty_reserves(cfg, date_list, reserves_list, cookies)
+    ( reserves_list, http_req_num ) = get_empty_reserves(cfg, date_list, reserves_list, cookies, http_req_num=0)
 
     # LINEにメッセージを送信する
     ## メッセージ本体を作成する
@@ -274,8 +339,14 @@ def main():
     ## LINEに空き予約情報を送信する
     reserve_tools.send_line_notify(message_bodies, cfg)
 
+    # デバッグ用(HTTPリクエスト回数を表示する)
+    print(f'HTTP リクエスト数: {http_req_num} 回数')
+
+    # 実行時間を表示する
+    elapsed_time = time.time() - start
+    print(f'main() duration time: {elapsed_time}')
+
     exit()
     
 if __name__ == '__main__':
     main()
-
