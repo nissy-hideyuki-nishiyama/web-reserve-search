@@ -1423,7 +1423,7 @@ def main():
             ( reserved_number, reserve ) = do_reserves_from_datesearch(cfg, cookies, form_data, _date, _time)
             # 予約できなかった場合はreturn を返す
             if reserved_number is None:
-                print(f'could not do reseve: {reserve}')
+                print(f'could not do reserve: {reserve}')
                 continue
             # 予約確定通知のメッセージを作成する
             message_bodies = create_reserved_message(reserved_number, reserve, message_bodies, cfg)

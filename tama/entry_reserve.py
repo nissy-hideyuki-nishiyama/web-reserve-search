@@ -60,9 +60,9 @@ def prepare_proc_for_reserve(cfg, headers):
     事前準備作業をする
     """
     #ヘッダー情報
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
-    }
+    #headers = {
+    #    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+    #}
     # トップページに接続する
     #( cookies ) = get_cookie_request(cfg, headers)
     # ログインIDとパスワードを入力し、ログインし、ログイン後のcookieを取得する
@@ -548,7 +548,7 @@ def main():
     ## ログインする
     ## クッキーを取得する
     ## 既存予約リストと件数を取得する
-    ( cookies, resered_list, reserved_num ) = prepare_proc_for_reserve(cfg, headers)
+    ( cookies, reserved_list, reserved_num ) = prepare_proc_for_reserve(cfg, headers)
     ## 予約処理の継続確認
     if reserved_num >= cfg['reserved_limit']:
         return None
@@ -557,7 +557,7 @@ def main():
     ## 空き予約日+空きコート番号を指定して、コート別空き予約時間帯ページを表示する
     ## 予約カゴに入れる
     ## 予約を確定する
-    #( reserved_number, date, time ) = do_reserve(cfg, cookies, date, time, court)
+    #( reserved_number, reserve ) = do_reserve(cfg, court_map, cookies, date, time, court)
     ( reserved_number, reserve ) = do_reserve(cfg, court_map, cookies, 20210928, '06:00～08:00', '多摩東公園庭球場Ｃ（人工芝）')
     ## -- forループ: まとめて複数予約すると、1件が予約できないとその判定処理が必要で複雑になる
     ## LINEで通知する
