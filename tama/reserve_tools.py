@@ -373,6 +373,50 @@ def create_date_list(target_months_list, public_holiday, cfg):
     #print(date_list)
     return date_list
 
+# 予約上限数を取得する
+def get_reserved_limit(cfg):
+    """
+    予約上限数を取得する
+    開放日(cfg['open_day'])以降は予約上限数をcfg['reserved_limit_after']の値とする
+    開放日前は予約上限数をcfg['reserved_limit_after_open_day']の値とする
+    """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の日付を取得する
+    _now = datetime.datetime.now(JST)
+    #_this_year = _now.year
+    #_this_month = _now.month
+    _today = _now.day
+    # 今日の日付から予約上限数を取得する
+    if _today < cfg['open_day']:
+        reserved_limit = cfg['reserved_limit']
+    else:
+        reserved_limit = cfg['reserved_limit_after_open_day']
+    return reserved_limit
+
+# 予約処理をする利用者IDリストを作成する
+def get_userauth_dict(cfg):
+    """
+    利用者IDリストを作成する。ID:PASSWORDのdict型で作成する
+    開放日(cfg['open_day'])以降はadmin、inner(市内在住者)、outer(市外居住者)を利用者IDリストとする
+    開放日以前はadmin、innerとする
+    """
+    # 利用者IDリストを初期化する
+    userauth = cfg['userauth']
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の日付を取得する
+    _now = datetime.datetime.now(JST)
+    #_this_year = _now.year
+    #_this_month = _now.month
+    _today = _now.day
+    # 今日の日付から予約上限数を取得する
+    if _today < cfg['open_day']:
+        # 市外居住者のIDを削除する
+        del userauth['outers']
+    #print(f'userauth: {userauth}')
+    return userauth
+
 # 調布市向け
 # 監視対象日の年月日リストの2次元配列([[YYYY, MM, DD], [YYYY, MM, DD], ...])を作成する
 def create_date_list_chofu(target_months_list, public_holiday, cfg):
@@ -536,7 +580,6 @@ def elapsed_time(f):
         print(f"{f.__name__}: {time.time() - start} sec")
         return v
     return wrapper
-
 
 # メインルーチン
 def main():

@@ -443,7 +443,7 @@ def main2(cfg, cookies, court_link_list, coro, limit=4):
     return results
 
 # 事前準備作業
-def prepare_proc_for_reserve(cfg, headers):
+def prepare_proc_for_reserve(cfg, headers, id, password):
     """
     事前準備作業をする
     """
@@ -458,11 +458,12 @@ def prepare_proc_for_reserve(cfg, headers):
     # seleniumを初期化
     ( driver, mouse ) = setup_driver(headers)
     # トップページに接続し、ログイン画面で利用者IDとパスワードを入力する
-    ( cookies , reserved_list, reserved_num ) = selenium_get_cookie(driver, cfg)
+    ( cookies , reserved_list, reserved_num ) = selenium_get_cookie(driver, cfg, id, password)
     # cookie、既存予約リスト、予約済み数を返す
     return cookies, reserved_list, reserved_num
 
 # Selenium初期化
+@reserve_tools.elapsed_time
 def setup_driver(headers):
     """
     seleniumを初期化する
@@ -484,7 +485,7 @@ def setup_driver(headers):
 
 # 利用者IDとパスワードでログインし、認証後のcookieを取得する 
 @reserve_tools.elapsed_time
-def selenium_get_cookie(driver, cfg):
+def selenium_get_cookie(driver, cfg, id, password):
     """
     selenuimuで接続する
     cookieを取得する
@@ -515,9 +516,11 @@ def selenium_get_cookie(driver, cfg):
     f_userid = driver.find_element_by_xpath("//*[@id='LoginInputUC_UserIdTextBox']")
     f_password = driver.find_element_by_xpath("//*[@id='LoginInputUC_PasswordTextBox']")
     # 利用者IDフィールドに入力する
-    f_userid.send_keys(str(cfg['userid']))
+    #f_userid.send_keys(str(cfg['userid']))
+    f_userid.send_keys(str(id))
     # パスワードフィールドに入力する
-    f_password.send_keys(str(cfg['password']))
+    #f_password.send_keys(str(cfg['password']))
+    f_password.send_keys(str(password))
     # ログインボタンをクリックする
     driver.find_element_by_xpath("//*[@id='LoginInputUC_LoginImgButton']").click()
     http_req_num += 1
@@ -895,36 +898,36 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
     for _date, _d_value in reserves_list.items():
         # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
         if _date not in want_date_list:
-            print(f'not want day: {_date}')
+            #print(f'not want day: {_date}')
             continue
         # 空き予約時間帯とコートリストを取得する
         for _time, _court_list in _d_value.items():
             # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
             if _time not in want_hour_list:
-                print(f'not want hour: {_date} {_time}')
+                #print(f'not want hour: {_date} {_time}')
                 continue
             # 希望コートリストの上から検索して、希望を優先するようにする
             for _court in want_location_list:
                 # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
                 if _court not in _court_list:
-                    print(f'not want location: {_date} {_time} {_court}')
+                    #print(f'not want location: {_date} {_time} {_court}')
                     continue
                 # 希望日+希望時間帯のリストに空き予約日がない場合は初期化後、コート名を追加する
                 if _date not in target_reserves_list:
                     target_reserves_list[_date] = {}
                     target_reserves_list[_date][_time] = []
                     target_reserves_list[_date][_time].append(_court)
-                    print(f'regist target reserves list: {_date} {_time} {_court}')
+                    #print(f'regist target reserves list: {_date} {_time} {_court}')
                 # ある場合は時間帯を追加する
                 else:
                     # 同じ時間帯がない場合は時間帯は追加する
                     if _time not in target_reserves_list[_date]:
                         target_reserves_list[_date][_time] = []
                         target_reserves_list[_date][_time].append(_court)
-                        print(f'regist target reserves list: {_date} {_time} {_court}')
+                        #print(f'regist target reserves list: {_date} {_time} {_court}')
                     else:
                         # 次の時間帯に進む
-                        print(f'found {_time} in target reserves list. therefore next time.')
+                        #print(f'found {_time} in target reserves list. therefore next time.')
                         # breakでコートのループを抜ける
                         break
             else:
@@ -946,6 +949,10 @@ def main3(cfg, sorted_reserves_list, want_date_list):
     want_hour_list = cfg['want_hour_list']
     # 希望施設名を取得する
     want_location_list = cfg['want_location_list']
+    # 予約上限数を取得する
+    reserved_limit = reserve_tools.get_reserved_limit(cfg)
+    # 予約処理に利用する利用者IDリスト(dict型)を取得する
+    userauth = reserve_tools.get_userauth_dict(cfg)
     # 予約処理対象の希望日、希望時間帯のリストを作成する
     # 空き予約リストを昇順にソートする
     #sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
@@ -953,7 +960,7 @@ def main3(cfg, sorted_reserves_list, want_date_list):
     #target_reserves_list = reserve_tools.create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     target_reserves_list = create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     # 希望日+希望時間帯のリストを出力する
-    print(f'target_reserves_list: {target_reserves_list}')
+    #print(f'target_reserves_list: {target_reserves_list}')
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
     if bool(target_reserves_list) == False:
         print(f'reserve process stopped. because empty reserves is not wanted.')
@@ -962,41 +969,67 @@ def main3(cfg, sorted_reserves_list, want_date_list):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
     }
-    # 既存予約リストと件数を取得する
-    ( cookies, reserved_list, reserved_num ) = prepare_proc_for_reserve(cfg, headers)
-    # 予約処理の継続確認
-    if reserved_num >= cfg['reserved_limit']:
-        print(f'reserve process stopped. because reserved limit: {reserved_num}')
-        return None
-    #exit()
-    # 希望日+希望時間帯のリストを元に空き予約を探し、予約処理を行う
-    for _date, _time_list in target_reserves_list.items():
-        for _time, _court_list in _time_list.items():
-            for _court in _court_list:
-                # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
-                if reserved_num >= int(cfg['reserved_limit']):
-                    print(f'reserve number is limit over {cfg["reserved_limit"]}. threfore stop reserve process.')
-                    # breakでコートのループを抜ける
-                    break
-                # 改めてメッセージボディを初期化する
-                message_bodies = []
-                # 利用日時を入力して空きコート予約を検索する
-                #( reserved_number, reserve ) = do_reserve(cfg, court_map, cookies, 20210928, '06:00～08:00', '多摩東公園庭球場Ｃ（人工芝）')
-                ( reserved_number, reserve ) = do_reserve(cfg, court_map, cookies, _date, _time, _court)
-                # 予約できなかった場合はreturn を返す
-                if reserved_number is None:
-                    print(f'could not do reserve: {reserve}')
-                    continue
-                # 予約確定通知のメッセージを作成する
-                message_bodies = create_reserved_message(reserved_number, reserve, message_bodies, cfg)
-                # LINEに送信する
-                reserve_tools.send_line_notify(message_bodies, cfg)
-                # 予約件数に1件追加する
-                reserved_num += 1
-            else:
+    # 利用者IDリストから順に検索する
+    ## タイプ毎のID:PASSリストを取得する
+    for _type, _type_list in userauth.items():
+        # タイプ別のID:PASSリストが空の場合は次のタイプに移る
+        if not bool(_type_list):
+            print(f'type users list is empty.')
+            continue 
+        # 利用者ID毎に予約処理を開始する
+        ## IDとパスワードを取得する
+        for _id, _password in _type_list.items():
+            print(f'UserID:{_id}, PASS:{_password} is logined.')
+            # 希望日+希望時間帯+希望コートのリストを作成する
+            # 複数IDで予約を取得するため、取得した空き予約リストから予約済みのものを除いたものから希望リストを作成することで、
+            # 同日・同時間帯のコートを複数取得できることになるため。
+            target_reserves_list = create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+            # 希望日+希望時間帯+希望コートのリストを出力する
+            print(f'target_reserves_list: {target_reserves_list}')
+            # 既存予約リストと件数を取得する
+            ( cookies, reserved_list, reserved_num ) = prepare_proc_for_reserve(cfg, headers, _id, _password)
+            # 予約処理の継続確認
+            if reserved_num >= int(reserved_limit):
+                print(f'reserve process stopped. because reserved limit({reserved_limit}) over: {reserved_num}')
+                #print(f'reserved_list:')
+                #print(json.dumps(reserved_list, indent=2, ensure_ascii=False))
+                #return None
                 continue
-        else:
-            continue
+            #exit()
+            #continue
+            # 希望日+希望時間帯+希望コートのリストを元に空き予約を探し、予約処理を行う
+            for _date, _time_list in target_reserves_list.items():
+                for _time, _court_list in _time_list.items():
+                    for _court in _court_list:
+                        # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
+                        if reserved_num >= int(reserved_limit):
+                            print(f'reserve number is limit over {reserved_limit}. threfore stop reserve process.')
+                            # breakでコートのループを抜ける
+                            break
+                        # 改めてメッセージボディを初期化する
+                        message_bodies = []
+                        # 利用日時を入力して空きコート予約を検索する
+                        ( reserved_number, reserve ) = do_reserve(cfg, court_map, cookies, _date, _time, _court)
+                        # 予約できなかった場合は次のコートまたは予約に移る
+                        if reserved_number is None:
+                            print(f'could not do reserve: {reserve}')
+                            continue
+                        else:
+                            # 予約できたものは発見した空き予約リスト(昇順)から削除する
+                            # 削除しないと次の利用者IDの検索時に不要な検索をしてしまうため
+                            print(f'delete from sorted_reserves_list: {_date} {_time} {_court}')
+                            _index = sorted_reserves_list[_date][_time].index(_court)
+                            del sorted_reserves_list[_date][_time][_index]
+                        # 予約確定通知のメッセージを作成する
+                        message_bodies = create_reserved_message(reserved_number, reserve, message_bodies, cfg)
+                        # LINEに送信する
+                        reserve_tools.send_line_notify(message_bodies, cfg)
+                        # 予約件数に1件追加する
+                        reserved_num += 1
+                    else:
+                        continue
+                else:
+                    continue
     # プログラムの終了
     #exit()
     return None
