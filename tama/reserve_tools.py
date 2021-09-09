@@ -3,7 +3,9 @@
 from time import sleep
 import math
 import datetime
+#from datetime import datetime, date, timedelta 
 import calendar
+from dateutil.relativedelta import relativedelta
 
 ## ファイルIO、ディレクトリ関連
 import os
@@ -121,6 +123,28 @@ def create_month_list(cfg):
     # 年越処理のために、年数に1を追加する
     #next_year = _now.year + 1
     return target_months
+
+# 今日と翌月1日(YYYYMM)の文字列を取得する
+def get_today_and_netx_month_string():
+    """
+    翌月(YYYYMM)の文字列を取得する
+    """
+    # 今日の年月日を取得する# タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の年月を取得する
+    _now = datetime.datetime.now(JST)
+    _this_year = str(_now.year)
+    _this_month = str(_now.month).zfill(2)
+    _this_day = str(_now.day).zfill(2)
+    _this_yyyymm = str(_this_year + _this_month)
+    _today = str(_this_year + _this_month + _this_day)
+    # 今月の1日を取得してから翌月1日を取得する
+    _next_firstday = datetime.datetime.today().replace(day=1) + relativedelta(months=+1)
+    _next_year = str(_next_firstday.year)
+    _next_month = str(_next_firstday.month).zfill(2)
+    _next_day = str(_next_firstday).zfill(2)
+    _next_month_firstday = str(_next_year + _next_month + _next_day)
+    return _today, _next_month_firstday
 
 # 検索対象月の希望曜日・祝日・希望日のリストを作成する
 def create_day_list(month, public_holiday, cfg):
@@ -373,7 +397,7 @@ def create_date_list(target_months_list, public_holiday, cfg):
     #print(date_list)
     return date_list
 
-# 予約上限数を取得する
+# 予約上限数と翌月の予約上限数を取得する
 def get_reserved_limit(cfg):
     """
     予約上限数を取得する
@@ -390,9 +414,11 @@ def get_reserved_limit(cfg):
     # 今日の日付から予約上限数を取得する
     if _today < cfg['open_day']:
         reserved_limit = cfg['reserved_limit']
+        reserved_limit_for_next_month = cfg['reserved_limit_for_next_month']
     else:
         reserved_limit = cfg['reserved_limit_after_open_day']
-    return reserved_limit
+        reserved_limit_for_next_month = cfg['reserved_limit_for_next_month_after_open_day']
+    return reserved_limit, reserved_limit_for_next_month
 
 # 予約処理をする利用者IDリストを作成する
 def get_userauth_dict(cfg):

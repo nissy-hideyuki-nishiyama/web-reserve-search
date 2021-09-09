@@ -386,7 +386,7 @@ def prepare():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg.json')
+    cfg = reserve_tools.read_json_cfg('cfg3.json')
     # 検索リストを作成する
     ## 検索対象月を取得する
     target_months_list = reserve_tools.create_month_list(cfg)
@@ -458,9 +458,9 @@ def prepare_proc_for_reserve(cfg, headers, id, password):
     # seleniumを初期化
     ( driver, mouse ) = setup_driver(headers)
     # トップページに接続し、ログイン画面で利用者IDとパスワードを入力する
-    ( cookies , reserved_list, reserved_num ) = selenium_get_cookie(driver, cfg, id, password)
+    ( cookies , reserved_list, reserved_num, reserved_num_for_next_month ) = selenium_get_cookie(driver, cfg, id, password)
     # cookie、既存予約リスト、予約済み数を返す
-    return cookies, reserved_list, reserved_num
+    return cookies, reserved_list, reserved_num, reserved_num_for_next_month
 
 # Selenium初期化
 @reserve_tools.elapsed_time
@@ -543,10 +543,10 @@ def selenium_get_cookie(driver, cfg, id, password):
     #with open(_file_name, 'w', encoding='utf-8') as file:
     #    file.write(response)
     # 既存予約を取得する
-    ( reserved_list, reserved_num ) = get_current_reserved_list(response)
+    ( reserved_list, reserved_num, reserved_num_for_next_month ) = get_current_reserved_list(response)
     # seleniumを終了する
     driver.quit()
-    return _cookies, reserved_list, reserved_num
+    return _cookies, reserved_list, reserved_num, reserved_num_for_next_month
 
 # フォームデータを解析する
 def get_common_formdata(response):
@@ -573,11 +573,18 @@ def get_common_formdata(response):
     #print(json.dumps(_form_data, indent=2, ensure_ascii=False))
     return _form_data
 
-# フォームデータを解析して既存予約リストと予約件数を取得する
+# フォームデータを解析して既存予約リストと予約件数, 翌月予約件数を取得する
 def get_current_reserved_list(response):
     """
-    予約の確認をクリックして、予約済みリストと予約件数を取得する
+    予約の確認をクリックして、予約済みリストと予約件数, 翌月予約件数を取得する
     """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の年月を取得する
+    _now = datetime.datetime.now(JST)
+    _this_year = str(_now.year)
+    _this_month = str(_now.month).zfill(2)
+    __this_yyyymm = str(_this_year + _this_month)
     # html解析
     soup = BeautifulSoup(response, 'html.parser')
     # 予約情報部分のみ抽出する
@@ -587,6 +594,7 @@ def get_current_reserved_list(response):
     # 予約情報と予約件数を初期化する
     reserved_list = {}
     reserved_num = 0
+    reserved_num_for_next_month =0
     # 予約情報を取得する
     for _tag in _td:
         #print(_tag.contents)
@@ -606,6 +614,7 @@ def get_current_reserved_list(response):
         _month = str(_date.split('.')[1]).zfill(2)
         _day = str(_date.split('.')[2]).zfill(2)
         __date = _year + _month + _day
+        __yyyymm = _year + _month
         # コート名のみ抽出する
         _court = _court.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）','').replace('奈良原公園庭球場','')
         #print(f'{__date} {_time}')
@@ -614,9 +623,13 @@ def get_current_reserved_list(response):
             reserved_list[__date] = {}
         reserved_list[__date].setdefault(_time, []).append(_court)
         reserved_num += 1
+        # 予約日が翌月の場合
+        if int(__this_yyyymm) < int(__yyyymm):
+            reserved_num_for_next_month += 1
     print(json.dumps(reserved_list, indent=2, ensure_ascii=False))
     print(f'reserved_num: {reserved_num}')
-    return reserved_list, reserved_num
+    print(f'reserved_num_for_next_mont: {reserved_num_for_next_month}')
+    return reserved_list, reserved_num, reserved_num_for_next_month
 
 # 空き予約をする
 @reserve_tools.elapsed_time
@@ -949,8 +962,10 @@ def main3(cfg, sorted_reserves_list, want_date_list):
     want_hour_list = cfg['want_hour_list']
     # 希望施設名を取得する
     want_location_list = cfg['want_location_list']
-    # 予約上限数を取得する
-    reserved_limit = reserve_tools.get_reserved_limit(cfg)
+    # 今日と翌月1日の年月日を取得する
+    ( today, next_month_firstday ) = reserve_tools.get_today_and_netx_month_string()
+    # 予約上限数と翌月予約上限数を取得する
+    ( reserved_limit, reserved_limit_for_next_month ) = reserve_tools.get_reserved_limit(cfg)
     # 予約処理に利用する利用者IDリスト(dict型)を取得する
     userauth = reserve_tools.get_userauth_dict(cfg)
     # 予約処理対象の希望日、希望時間帯のリストを作成する
@@ -987,8 +1002,8 @@ def main3(cfg, sorted_reserves_list, want_date_list):
             # 希望日+希望時間帯+希望コートのリストを出力する
             print(f'target_reserves_list: {target_reserves_list}')
             # 既存予約リストと件数を取得する
-            ( cookies, reserved_list, reserved_num ) = prepare_proc_for_reserve(cfg, headers, _id, _password)
-            # 予約処理の継続確認
+            ( cookies, reserved_list, reserved_num, reserved_num_for_next_month ) = prepare_proc_for_reserve(cfg, headers, _id, _password)
+            # 予約処理の継続確認。予約件数が上限値になったら次のIDの処理をする
             if reserved_num >= int(reserved_limit):
                 print(f'reserve process stopped. because reserved limit({reserved_limit}) over: {reserved_num}')
                 #print(f'reserved_list:')
@@ -996,13 +1011,13 @@ def main3(cfg, sorted_reserves_list, want_date_list):
                 #return None
                 continue
             #exit()
-            #continue
+            continue
             # 希望日+希望時間帯+希望コートのリストを元に空き予約を探し、予約処理を行う
             for _date, _time_list in target_reserves_list.items():
                 for _time, _court_list in _time_list.items():
                     for _court in _court_list:
                         # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
-                        if reserved_num >= int(reserved_limit):
+                        if int(reserved_num) >= int(reserved_limit) and int(reserved_num_for_next_month) >= int(reserved_limit_for_next_month) :
                             print(f'reserve number is limit over {reserved_limit}. threfore stop reserve process.')
                             # breakでコートのループを抜ける
                             break
@@ -1026,6 +1041,10 @@ def main3(cfg, sorted_reserves_list, want_date_list):
                         reserve_tools.send_line_notify(message_bodies, cfg)
                         # 予約件数に1件追加する
                         reserved_num += 1
+                        # 翌月の年月日なら翌月予約件数に1件追加する
+                        # 翌月1日以上ならば追加する
+                        if int(_date) >= int(next_month_firstday):
+                            reserved_num_for_next_month += 1
                     else:
                         continue
                 else:
