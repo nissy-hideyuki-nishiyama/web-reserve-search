@@ -142,8 +142,9 @@ def get_today_and_netx_month_string():
     _next_firstday = datetime.datetime.today().replace(day=1) + relativedelta(months=+1)
     _next_year = str(_next_firstday.year)
     _next_month = str(_next_firstday.month).zfill(2)
-    _next_day = str(_next_firstday).zfill(2)
+    _next_day = str(_next_firstday.day).zfill(2)
     _next_month_firstday = str(_next_year + _next_month + _next_day)
+    #print(f'today:{_today}, next_month_firstday:{_next_month_firstday}')
     return _today, _next_month_firstday
 
 # 検索対象月の希望曜日・祝日・希望日のリストを作成する
