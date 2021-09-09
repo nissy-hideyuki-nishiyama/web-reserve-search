@@ -59,8 +59,17 @@
 ### 設定ファイルのパラメータ説明
 上から順に説明する
 - first_url: プログラム内で参照される値なので原則さわらない
-...
-...
+- second_url: 同上
+- third_url: 同上
+- day_search_url: 同上
+- court_search_url: 同上
+- login_url: 同上
+- reserve_url: 同上
+- input_reserve_url: 同上
+- result_reserve_url: 同上
+- cookie_sessionid: 同上
+- cookie_starturl: 同上
+- cookie_auth: 同上
 - search_params: 同上
 - exclude_courts: 空き予約コート検索から除外したいコートのコードを記述する。コードはコート名とコートのコードの対応ファイル(court_map.json)を参照のこと
 - exclude_times: 空き予約コート検索から除外したい時間帯を指定する
