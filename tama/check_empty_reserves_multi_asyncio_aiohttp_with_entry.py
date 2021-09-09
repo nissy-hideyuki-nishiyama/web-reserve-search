@@ -1025,6 +1025,7 @@ def main3(cfg, sorted_reserves_list, want_date_list):
                         # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
                         if int(reserved_num) >= int(reserved_limit) and int(reserved_num_for_weekend_of_next_month) >= int(reserved_limit_for_next_month):
                             print(f'reserve number is limit over {reserved_limit}. threfore stop reserve process.')
+                            print(f'reserve number for weekend of next month is limit over {reserved_limit_for_next_month}. threfore stop reserve process.')
                             # breakでコートのループを抜ける
                             break
                         # 改めてメッセージボディを初期化する
