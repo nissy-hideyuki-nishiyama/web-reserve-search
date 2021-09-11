@@ -836,24 +836,6 @@ def get_reserved_number(response):
     else:
         return None
 
-## 予約確定通知メッセージを作成する
-def create_reserved_message(userid, reserved_number, reserve, message_bodies, cfg):
-    """
-    予約確定通知用のメッセージボディーを作成する
-    """
-    # メッセージ本文の文頭を作成する
-    _body = f'\n予約が確定しました。マイページで確認してください。\n'
-    _body = f'{_body}利用者ID: {userid}\n'
-    _body = f'{_body}予約番号: {reserved_number}\n'
-    # 予約リストを与えて、取得した予約情報を追記する
-    message_bodies = reserve_tools.create_message_body(reserve, message_bodies, cfg)
-    # message_bodiesリストの最初の要素が予約情報なので、これを文頭と結合する
-    _reserve_info = message_bodies[0]
-    _body = f'{_body}{_reserve_info}'
-    # message_bodiesリストの最初の要素を書き換える
-    message_bodies[0] = f'{_body}'
-    return message_bodies
-
 ## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リストを作成する
 def create_target_reserves_list_old(reserves_list, want_date_list, want_hour_list, want_location_list):
     """
@@ -1048,7 +1030,7 @@ def main3(cfg, sorted_reserves_list, want_date_list):
                             _index = sorted_reserves_list[_date][_time].index(_court)
                             del sorted_reserves_list[_date][_time][_index]
                         # 予約確定通知のメッセージを作成する
-                        message_bodies = create_reserved_message(_id, reserved_number, reserve, message_bodies, cfg)
+                        message_bodies = reserve_tools.create_reserved_message(_id, reserved_number, reserve, message_bodies, cfg)
                         # LINEに送信する
                         reserve_tools.send_line_notify(message_bodies, cfg)
                         # 予約件数に1件追加する

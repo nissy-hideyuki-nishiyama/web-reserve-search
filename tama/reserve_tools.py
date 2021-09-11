@@ -569,6 +569,24 @@ def create_message_body(reserves_list, message_bodies, cfg):
         print(_message)
     return message_bodies
 
+## 予約確定通知メッセージの本文を作成する
+def create_reserved_message(userid, reserved_number, reserve, message_bodies, cfg):
+    """
+    予約確定通知用のメッセージボディーを作成する
+    """
+    # メッセージ本文の文頭を作成する
+    _body = f'\n予約が確定しました。マイページで確認してください。\n'
+    _body = f'{_body}利用者ID: {userid}\n'
+    _body = f'{_body}予約番号: {reserved_number}\n'
+    # 予約リストを与えて、取得した予約情報を追記する
+    message_bodies = create_message_body(reserve, message_bodies, cfg)
+    # message_bodiesリストの最初の要素が予約情報なので、これを文頭と結合する
+    _reserve_info = message_bodies[0]
+    _body = f'{_body}{_reserve_info}'
+    # message_bodiesリストの最初の要素を書き換える
+    message_bodies[0] = f'{_body}'
+    return message_bodies
+
 # LINEにメッセージを送信する
 def send_line_notify(message_bodies, cfg):
     """
