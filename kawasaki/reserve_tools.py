@@ -3,7 +3,9 @@
 from time import sleep
 import math
 import datetime
+#from datetime import datetime, date, timedelta 
 import calendar
+from dateutil.relativedelta import relativedelta
 
 ## ファイルIO、ディレクトリ関連
 import os
@@ -121,6 +123,29 @@ def create_month_list(cfg):
     # 年越処理のために、年数に1を追加する
     #next_year = _now.year + 1
     return target_months
+
+# 今日と翌月1日(YYYYMM)の文字列を取得する
+def get_today_and_netx_month_string():
+    """
+    翌月(YYYYMM)の文字列を取得する
+    """
+    # 今日の年月日を取得する# タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の年月を取得する
+    _now = datetime.datetime.now(JST)
+    _this_year = str(_now.year)
+    _this_month = str(_now.month).zfill(2)
+    _this_day = str(_now.day).zfill(2)
+    _this_yyyymm = str(_this_year + _this_month)
+    _today = str(_this_year + _this_month + _this_day)
+    # 今月の1日を取得してから翌月1日を取得する
+    _next_firstday = datetime.datetime.today().replace(day=1) + relativedelta(months=+1)
+    _next_year = str(_next_firstday.year)
+    _next_month = str(_next_firstday.month).zfill(2)
+    _next_day = str(_next_firstday.day).zfill(2)
+    _next_month_firstday = str(_next_year + _next_month + _next_day)
+    #print(f'today:{_today}, next_month_firstday:{_next_month_firstday}')
+    return _today, _next_month_firstday
 
 # 検索対象月の希望曜日・祝日・希望日のリストを作成する
 def create_day_list(month, public_holiday, cfg):
@@ -280,6 +305,75 @@ def get_weekday_from_datestring(datestring):
     #print(f'{dt}, {wd}')
     return dt, wd
 
+## 空き予約リストを昇順に並べ替える
+def sort_reserves_list(reserves_list):
+    """
+    空き予約リストを昇順に並べ変える
+    """
+    sorted_reserves_list = {}
+    _sort_date = []
+    # 日付順に並び変えたリストを作成する
+    sorted_date = sorted(reserves_list.keys())
+    for _date in sorted_date:
+        sorted_reserves_list[_date] = {}
+        for _time, _location_list in sorted(reserves_list[_date].items()):
+            # 昇順にソートして、重複を取り除く(非同期処理の弊害)
+            _sorted_location_list = sorted(list(set(_location_list)))
+            sorted_reserves_list[_date][_time] = _sorted_location_list
+    # 昇順に並び変えた予約リストを返す
+    print(json.dumps(sorted_reserves_list, indent=2, ensure_ascii=False))
+    return sorted_reserves_list
+
+## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
+def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list):
+    """
+    予約処理対象の希望日、希望時間帯のリストを作成する
+    """
+    # 希望日+希望時間帯のリストを初期化する
+    target_reserves_list = {}
+    # 空き予約リストから、空き予約日と値を取得する
+    for _date, _d_value in reserves_list.items():
+        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
+        if _date not in want_date_list:
+            print(f'not want day: {_date}')
+            continue
+        # 空き予約時間帯とコートリストを取得する
+        for _time, _court_list in _d_value.items():
+            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
+            if _time not in want_hour_list:
+                print(f'not want hour: {_date} {_time}')
+                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
+                #continue
+            for _court in _court_list:
+                # 空きコート名から、施設名とコート名に分割する
+                _location_name = _court.split('／')[0]
+                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
+                if _location_name not in want_location_list:
+                    print(f'not want location: {_date} {_time} {_court}')
+                    continue
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化語、時間帯を追加する
+                if _date not in target_reserves_list:
+                    target_reserves_list[_date] = []
+                    target_reserves_list[_date].append(_time)
+                    print(f'regist target reserves list: {_date} {_time} {_court}')
+                # ある場合は時間帯を追加する
+                else:
+                    # 同じ時間帯がない場合は時間帯は追加する
+                    if _time not in target_reserves_list[_date]:
+                        target_reserves_list[_date].append(_time)
+                        print(f'regist target reserves list: {_date} {_time} {_court}')
+                    else:
+                        # 次の時間帯に進む
+                        print(f'found {_time} in target reserves list. therefore next time.')
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
+    # 希望日+希望時間帯のリストを返す
+    #print(f'{target_reserves_list}')
+    return target_reserves_list
+
 # 東京都多摩市向け
 # 年月日(YYYYMMDD)の入力リストを作成する
 def create_date_list(target_months_list, public_holiday, cfg):
@@ -303,6 +397,52 @@ def create_date_list(target_months_list, public_holiday, cfg):
             date_list.append(_date)
     #print(date_list)
     return date_list
+
+# 予約上限数と翌月の予約上限数を取得する
+def get_reserved_limit(cfg):
+    """
+    予約上限数を取得する
+    開放日(cfg['open_day'])以降は予約上限数をcfg['reserved_limit_after']の値とする
+    開放日前は予約上限数をcfg['reserved_limit_after_open_day']の値とする
+    """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の日付を取得する
+    _now = datetime.datetime.now(JST)
+    #_this_year = _now.year
+    #_this_month = _now.month
+    _today = _now.day
+    # 今日の日付から予約上限数を取得する
+    if _today < cfg['open_day']:
+        reserved_limit = cfg['reserved_limit']
+        reserved_limit_for_next_month = cfg['reserved_limit_for_next_month']
+    else:
+        reserved_limit = cfg['reserved_limit_after_open_day']
+        reserved_limit_for_next_month = cfg['reserved_limit_for_next_month_after_open_day']
+    return reserved_limit, reserved_limit_for_next_month
+
+# 予約処理をする利用者IDリストを作成する
+def get_userauth_dict(cfg):
+    """
+    利用者IDリストを作成する。ID:PASSWORDのdict型で作成する
+    開放日(cfg['open_day'])以降はadmin、inner(市内在住者)、outer(市外居住者)を利用者IDリストとする
+    開放日以前はadmin、innerとする
+    """
+    # 利用者IDリストを初期化する
+    userauth = cfg['userauth']
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の日付を取得する
+    _now = datetime.datetime.now(JST)
+    #_this_year = _now.year
+    #_this_month = _now.month
+    _today = _now.day
+    # 今日の日付から予約上限数を取得する
+    if _today < cfg['open_day']:
+        # 市外居住者のIDを削除する
+        del userauth['outers']
+    #print(f'userauth: {userauth}')
+    return userauth
 
 # 調布市向け
 # 監視対象日の年月日リストの2次元配列([[YYYY, MM, DD], [YYYY, MM, DD], ...])を作成する
@@ -429,6 +569,24 @@ def create_message_body(reserves_list, message_bodies, cfg):
         print(_message)
     return message_bodies
 
+## 予約確定通知メッセージの本文を作成する
+def create_reserved_message(userid, reserved_number, reserve, message_bodies, cfg):
+    """
+    予約確定通知用のメッセージボディーを作成する
+    """
+    # メッセージ本文の文頭を作成する
+    _body = f'\n予約が確定しました。マイページで確認してください。\n'
+    _body = f'{_body}利用者ID: {userid}\n'
+    _body = f'{_body}予約番号: {reserved_number}\n'
+    # 予約リストを与えて、取得した予約情報を追記する
+    message_bodies = create_message_body(reserve, message_bodies, cfg)
+    # message_bodiesリストの最初の要素が予約情報なので、これを文頭と結合する
+    _reserve_info = message_bodies[0]
+    _body = f'{_body}{_reserve_info}'
+    # message_bodiesリストの最初の要素を書き換える
+    message_bodies[0] = f'{_body}'
+    return message_bodies
+
 # LINEにメッセージを送信する
 def send_line_notify(message_bodies, cfg):
     """
@@ -467,7 +625,6 @@ def elapsed_time(f):
         print(f"{f.__name__}: {time.time() - start} sec")
         return v
     return wrapper
-
 
 # メインルーチン
 def main():

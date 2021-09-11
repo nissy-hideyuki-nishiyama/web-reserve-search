@@ -324,7 +324,7 @@ def sort_reserves_list(reserves_list):
     print(json.dumps(sorted_reserves_list, indent=2, ensure_ascii=False))
     return sorted_reserves_list
 
-## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リストを作成する
+## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
 def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list):
     """
     予約処理対象の希望日、希望時間帯のリストを作成する

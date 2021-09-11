@@ -837,59 +837,8 @@ def get_reserved_number(response):
         return None
 
 ## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リストを作成する
-def create_target_reserves_list_old(reserves_list, want_date_list, want_hour_list, want_location_list):
-    """
-    予約処理対象の希望日、希望時間帯のリストを作成する
-    """
-    # 希望日+希望時間帯のリストを初期化する
-    target_reserves_list = {}
-    # 空き予約リストから、空き予約日と値を取得する
-    for _date, _d_value in reserves_list.items():
-        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
-        if _date not in want_date_list:
-            print(f'not want day: {_date}')
-            continue
-        # 空き予約時間帯とコートリストを取得する
-        for _time, _court_list in _d_value.items():
-            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
-            if _time not in want_hour_list:
-                print(f'not want hour: {_date} {_time}')
-                continue
-            for _court in _court_list:
-                # 空きコート名から、施設名とコート名に分割する
-                _location_name = _court.split('／')[0]
-                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
-                if _location_name not in want_location_list:
-                    print(f'not want location: {_date} {_time} {_court}')
-                    continue
-                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化後、コート名を追加する
-                if _date not in target_reserves_list:
-                    target_reserves_list[_date] = {}
-                    target_reserves_list[_date][_time] = []
-                    target_reserves_list[_date][_time].append(_court)
-                    print(f'regist target reserves list: {_date} {_time} {_court}')
-                # ある場合は時間帯を追加する
-                else:
-                    # 同じ時間帯がない場合は時間帯は追加する
-                    if _time not in target_reserves_list[_date]:
-                        target_reserves_list[_date][_time] = []
-                        target_reserves_list[_date][_time].append(_court)
-                        print(f'regist target reserves list: {_date} {_time} {_court}')
-                    else:
-                        # 次の時間帯に進む
-                        print(f'found {_time} in target reserves list. therefore next time.')
-                        # breakでコートのループを抜ける
-                        break
-            else:
-                # _d_valueの次のループに進む
-                continue
-    # 希望日+希望時間帯のリストを返す
-    #print(f'{target_reserves_list}')
-    return target_reserves_list
-
-## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リストを作成する
 ## 希望施設名リストは昇順で検索するので、リストを前にするほど優先順位が高くなる
-def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list):
+def create_target_reserves_list_prior_court(reserves_list, want_date_list, want_hour_list, want_location_list):
     """
     予約処理対象の希望日、希望時間帯のリストを作成する
     """
@@ -960,8 +909,8 @@ def main3(cfg, sorted_reserves_list, want_date_list):
     # 空き予約リストを昇順にソートする
     #sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
     # 空き予約リストから、空き予約日と時間帯を取得する
-    #target_reserves_list = reserve_tools.create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
-    target_reserves_list = create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+    #target_reserves_list = reserve_tools.create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+    target_reserves_list = create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     # 希望日+希望時間帯のリストを出力する
     #print(f'target_reserves_list: {target_reserves_list}')
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
@@ -977,7 +926,7 @@ def main3(cfg, sorted_reserves_list, want_date_list):
     for _type, _type_list in userauth.items():
         # タイプ別のID:PASSリストが空の場合は次のタイプに移る
         if not bool(_type_list):
-            print(f'type users list is empty.')
+            print(f'{_type} type users list is empty.')
             continue 
         # 利用者ID毎に予約処理を開始する
         ## IDとパスワードを取得する
@@ -986,7 +935,7 @@ def main3(cfg, sorted_reserves_list, want_date_list):
             # 希望日+希望時間帯+希望コートのリストを作成する
             # 複数IDで予約を取得するため、取得した空き予約リストから予約済みのものを除いたものから希望リストを作成することで、
             # 同日・同時間帯のコートを複数取得できることになるため。
-            target_reserves_list = create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+            target_reserves_list = create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
             # 希望日+希望時間帯+希望コートのリストを出力する
             print(f'target_reserves_list: {target_reserves_list}')
             # 既存予約リストと件数を取得する

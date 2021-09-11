@@ -581,7 +581,7 @@ def get_login_formdata(response):
 
 ## ログインページで、ユーザーＩＤ、パスワードを入力して、マイページを表示する
 @reserve_tools.elapsed_time
-def input_userdata_in_login(cfg, cookies, headers, form_data):
+def input_userdata_in_login(cfg, userid, password, cookies, headers, form_data):
     """
     ログインページでユーザーIDとパスワード、セキュリティ番号を入力し、マイページに移動する
     """
@@ -593,9 +593,12 @@ def input_userdata_in_login(cfg, cookies, headers, form_data):
     #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
     # }
     _form_data = form_data
-    # ユーザーIDとパスワード、セキュリティ番号を入力する
-    _form_data['layoutChildBody:childForm:userid'] = cfg['userid']
-    _form_data['layoutChildBody:childForm:passwd'] = cfg['password']
+    # # ユーザーIDとパスワード、セキュリティ番号を入力する
+    # _form_data['layoutChildBody:childForm:userid'] = cfg['userid']
+    # _form_data['layoutChildBody:childForm:passwd'] = cfg['password']
+    # _form_data['layoutChildBody:childForm:securityno'] = cfg['securityid']
+    _form_data['layoutChildBody:childForm:userid'] = userid
+    _form_data['layoutChildBody:childForm:passwd'] = password
     _form_data['layoutChildBody:childForm:securityno'] = cfg['securityid']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
@@ -989,7 +992,7 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
     return response, _court, _matched
 
 ## 空き予約が5件以上存在したので、6件目以降を利用日時ページに検索データを入力して検索する
-#@reserve_tools.elapsed_time
+@reserve_tools.elapsed_time
 def search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data):
     """
     利用日時と利用目的、地域を入力して空き予約を検索する
@@ -1021,7 +1024,7 @@ def search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data)
     response = requests.post(cfg['empty_state_url'], headers=headers, cookies=cookies, data=params)
     http_req_num += 1
     # デバッグ用としてhtmlファイルとして保存する
-    #_datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2)
+    _datetime_string = str(datetime[0]) + str(datetime[1]).zfill(2) + str(datetime[2]).zfill(2) + str(datetime[3]).zfill(2) + str(datetime[4]).zfill(2)
     #_file_name = f'result_{_datetime_string}.html'
     #print(_file_name)
     #_file = reserve_tools.save_html_to_filename(response, _file_name)
@@ -1217,25 +1220,9 @@ def get_confirmed_reserve_number(response):
     #print(json.dumps(_form_data, indent=2, ensure_ascii=False))
     return _form_data, reserved_number
 
-## 予約確定通知メッセージを作成する
-def create_reserved_message(reserved_number, reserve, message_bodies, cfg):
-    """
-    予約確定通知用のメッセージボディーを作成する
-    """
-    # メッセージ本文の文頭を作成する
-    _body = f'\n予約が確定しました。マイページで確認してください。\n'
-    _body = f'{_body}予約番号: {reserved_number}\n'
-    # 予約リストを与えて、取得した予約情報を追記する
-    message_bodies = reserve_tools.create_message_body(reserve, message_bodies, cfg)
-    # message_bodiesリストの最初の要素が予約情報なので、これを文頭と結合する
-    _reserve_info = message_bodies[0]
-    _body = f'{_body}{_reserve_info}'
-    # message_bodiesリストの最初の要素を書き換える
-    message_bodies[0] = f'{_body}'
-    return message_bodies
-
 ## ログイン前の事前準備する
-def prepare_reserve(cfg):
+@reserve_tools.elapsed_time
+def prepare_reserve(cfg, userid, password):
     """
     空きコートを予約するためにログインなどの事前準備を行う
     1. トップページにアクセスし、クッキーを取得する
@@ -1253,26 +1240,8 @@ def prepare_reserve(cfg):
     # ログインページのフォームデータを取得する
     form_data = get_login_formdata(response)
     # ログインページで、ユーザーＩＤ、パスワードを入力して、マイページを表示する
-    ( cookies, headers, response ) = input_userdata_in_login(cfg, cookies, headers, form_data)
+    ( cookies, headers, response ) = input_userdata_in_login(cfg, userid, password, cookies, headers, form_data)
     return cookies, headers, response
-
-## 空き予約リストを昇順に並べ替える
-def sort_reserves_list(reserves_list):
-    """
-    空き予約リストを昇順に並べ変える
-    """
-    sorted_reserves_list = {}
-    _sort_date = []
-    # 日付順に並び変えたリストを作成する
-    sorted_date = sorted(reserves_list.keys())
-    for _date in sorted_date:
-        sorted_reserves_list[_date] = {}
-        for _time, _location_list in sorted(reserves_list[_date].items()):
-            _sorted_location_list = sorted(_location_list)
-            sorted_reserves_list[_date][_time] = _sorted_location_list
-    # 昇順に並び変えた予約リストを返す
-    print(json.dumps(sorted_reserves_list, indent=2, ensure_ascii=False))
-    return sorted_reserves_list
 
 ## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより、
 def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list):
@@ -1301,14 +1270,14 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
                 if _location_name not in want_location_list:
                     print(f'not want location: {_date} {_time} {_court}')
                     continue
-                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化語、時間帯を追加する
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化後、時間帯を追加する
                 if _date not in target_reserves_list:
                     target_reserves_list[_date] = []
                     target_reserves_list[_date].append(_time)
                     print(f'regist target reserves list: {_date} {_time} {_court}')
                 # ある場合は時間帯を追加する
                 else:
-                    # 同じ時間帯がない場合は時間帯は追加する
+                    # 同じ時間帯がない場合は時間帯を追加する
                     if _time not in target_reserves_list[_date]:
                         target_reserves_list[_date].append(_time)
                         print(f'regist target reserves list: {_date} {_time} {_court}')
@@ -1346,7 +1315,7 @@ def main():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg.json')
+    cfg = reserve_tools.read_json_cfg('cfg3.json')
     # スレッド数を設定する
     threads_num = cfg['threads_num']
     # 検索対象月を取得する
@@ -1382,55 +1351,74 @@ def main():
     want_location_list = cfg['want_location_list']
     # 予約処理対象の希望日、希望時間帯のリストを作成する
     # 空き予約リストを昇順にソートする
-    sorted_reserves_list = sort_reserves_list(threadsafe_list.reserves_list)
+    sorted_reserves_list = reserve_tools.sort_reserves_list(threadsafe_list.reserves_list)
     # 空き予約リストから、空き予約日と時間帯を取得する
-    target_reserves_list = create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+    target_reserves_list = reserve_tools.create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     # 希望日+希望時間帯のリストを出力する
     print(f'target_reserves_list: {target_reserves_list}')
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
     if bool(target_reserves_list) == False:
         print(f'reserve process stopped. because empty reserves is not wanted.')
         return None
-    # ログインIDを使ってログインし、事前準備をする
-    ( cookies, headers, response ) = prepare_reserve(cfg)
-    # マイページから既存予約情報を取得する
-    reserved_list = get_reserved_info(cfg, response)
-    #exit()
-    # 既存予約件数を取得する
-    reserved_num = get_reserved_num(reserved_list)
-    # 既存予約が予約上限数以上なら予約処理を中止する
-    if reserved_num < int(cfg['reserved_limit']):
-        print(f'reserve proccess starting')
-    else:
-        print(f'reserved number is limit of {cfg["reserved_limit"]}. therefore stop do reserve.')
-        return None
-    #exit()
-    # 利用日時から探すをクリックして、検索画面に移動する
-    response = go_to_search_date_menu_with_userid(cfg, cookies, headers)
-    ## フォームデータを取得する
-    form_data = get_formdata_rsvDateSearch(response)
-    # 希望日+希望時間帯のリストを元に空き予約を探し、予約処理を行う
-    for _date, _time_list in target_reserves_list.items():
-        for _time in _time_list:
-            # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
-            if reserved_num >= int(cfg['reserved_limit']):
-                print(f'reserve number is limit over {cfg["reserved_limit"]}. threfore stop reserve process.')
-                return None
-            # 改めてメッセージボディを初期化する
-            message_bodies = []
-            # 利用日時を入力して空きコート予約を検索する
-            #( reserved_number, reserve ) = search_empty_reserves_from_datesearch(cfg, cookies, form_data, "20210928", "14:00-16:00", reserves_list)
-            ( reserved_number, reserve ) = do_reserves_from_datesearch(cfg, cookies, form_data, _date, _time)
-            # 予約できなかった場合はreturn を返す
-            if reserved_number is None:
-                print(f'could not do reserve: {reserve}')
+    # 複数IDに対応する
+    userauth = cfg['userauth']
+    ## タイプ毎のID:PASSリストを取得する
+    for _type, _type_list in userauth.items():
+        # タイプ別のID:PASSリストが空の場合は次のタイプに移る
+        if not bool(_type_list):
+            print(f'{_type} type users list is empty.')
+            continue 
+        # 利用者ID毎に予約処理を開始する
+        ## IDとパスワードを取得する
+        for _userid, _password in _type_list.items():
+            print(f'UserID:{_userid}, PASS:{_password} is logined.')
+            # ログインIDを使ってログインし、事前準備をする
+            ( cookies, headers, response ) = prepare_reserve(cfg, _userid, _password)
+            # マイページから既存予約情報を取得する
+            reserved_list = get_reserved_info(cfg, response)
+            #exit()
+            # 既存予約件数を取得する
+            reserved_num = get_reserved_num(reserved_list)
+            # 既存予約が予約上限数以上なら予約処理を中止する
+            if reserved_num < int(cfg['reserved_limit']):
+                print(f'reserve proccess starting')
+            else:
+                print(f'reserved number is limit of {cfg["reserved_limit"]}. therefore stop do reserve.')
+                # 次の利用者IDで予約する
                 continue
-            # 予約確定通知のメッセージを作成する
-            message_bodies = create_reserved_message(reserved_number, reserve, message_bodies, cfg)
-            # LINEに送信する
-            reserve_tools.send_line_notify(message_bodies, cfg)
-            # 予約件数に1件追加する
-            reserved_num += 1
+            #exit()
+            # 利用日時から探すをクリックして、検索画面に移動する
+            response = go_to_search_date_menu_with_userid(cfg, cookies, headers)
+            ## フォームデータを取得する
+            form_data = get_formdata_rsvDateSearch(response)
+            # 希望日+希望時間帯のリストを元に空き予約を探し、予約処理を行う
+            for _date, _time_list in target_reserves_list.items():
+                for _time in _time_list:
+                    # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して次の利用者IDを使う
+                    if reserved_num >= int(cfg['reserved_limit']):
+                        print(f'reserve number is limit over {cfg["reserved_limit"]}. threfore stop reserve process.')
+                        # 次の利用者IDで予約する
+                        #return None
+                        continue
+                    # 改めてメッセージボディを初期化する
+                    message_bodies = []
+                    # 利用日時を入力して空きコート予約を検索する
+                    #( reserved_number, reserve ) = search_empty_reserves_from_datesearch(cfg, cookies, form_data, "20210928", "14:00-16:00", reserves_list)
+                    ( reserved_number, reserve ) = do_reserves_from_datesearch(cfg, cookies, form_data, _date, _time)
+                    # 予約できなかった場合はreturn を返す
+                    if reserved_number is None:
+                        print(f'could not do reserve: {reserve}')
+                        continue
+                    # 予約確定通知のメッセージを作成する
+                    message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg)
+                    # LINEに送信する
+                    reserve_tools.send_line_notify(message_bodies, cfg)
+                    # 予約件数に1件追加する
+                    reserved_num += 1
+                else:
+                    continue
+            else:
+                continue
     # プログラムの終了
     #exit()
     return None
