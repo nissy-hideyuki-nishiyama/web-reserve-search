@@ -591,13 +591,20 @@ def get_current_reserved_list(response):
     _form = soup.find_all('form')[0]
     _table = _form.find('table', id='ykr11001c_YoyakuListGridView')
     _td = _table.find_all('td', class_='table-cell-name')
+    _td_comment_D = _table.find_all('td', class_='comment_D')
     # 予約情報と予約件数を初期化する
     reserved_list = {}
     reserved_num = 0
     reserved_num_for_weekend_of_next_month =0
+    reserved_line_no = 0
     # 予約情報を取得する
     for _tag in _td:
         #print(_tag.contents)
+        # 予約レコードが落選の場合、次のタグの処理に移る
+        if _td_comment_D[reserved_line_no].contents[0] == '落選':
+            print(f'defeated reserve: {_tag}')
+            reserved_line_no += 1
+            continue
         # 年月日時間部分を取得
         _datetime = _tag.contents[0]
         # コート名を取得
@@ -624,6 +631,7 @@ def get_current_reserved_list(response):
             reserved_list[__date] = {}
         reserved_list[__date].setdefault(_time, []).append(_court)
         reserved_num += 1
+        reserved_line_no += 1
         # 予約日が翌月の場合
         if int(__this_yyyymm) < int(__yyyymm):
             # 予約日の曜日を取得する
@@ -633,7 +641,7 @@ def get_current_reserved_list(response):
                 reserved_num_for_weekend_of_next_month += 1
     print(json.dumps(reserved_list, indent=2, ensure_ascii=False))
     print(f'reserved_num: {reserved_num}')
-    print(f'reserved_num_for_weeknd_of_next_mont: {reserved_num_for_weekend_of_next_month}')
+    print(f'reserved_num_for_weeknd_of_next_month: {reserved_num_for_weekend_of_next_month}')
     return reserved_list, reserved_num, reserved_num_for_weekend_of_next_month
 
 # 空き予約をする
