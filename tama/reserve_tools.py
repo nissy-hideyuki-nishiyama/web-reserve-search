@@ -7,8 +7,9 @@ import datetime
 import calendar
 from dateutil.relativedelta import relativedelta
 
-## ファイルIO、ディレクトリ関連
+## ファイルIO、ディレクトリ関連　
 import os
+import sys
 
 ## JSON関連
 import json
@@ -19,6 +20,15 @@ import requests
 ## 処理時間の計測関連
 from functools import wraps
 import time
+
+# ログ関連
+from logging import (
+    getLogger,
+    StreamHandler,
+    Formatter,
+    DEBUG, INFO, WARNING, ERROR, CRITICAL
+)
+from logging.handlers import RotatingFileHandler
 
 # 設定ファイルの読み込み
 ## 祝日ファイル
@@ -48,6 +58,59 @@ def read_json_cfg(cfg_file_name):
         #print(f'Config:\n')
         #print(cfg)
         return cfg
+
+# loggerの設定
+def mylogger(cfg):
+    """
+    ロガーを定義し、ロガーのインスタンスを返す
+    """
+    # cfg から設定パラメータを取り出す
+    _logfile_path = cfg['logger_conf']['logfile_path']
+    _level_fh = cfg['logger_conf']['level_filehandler']
+    _level_sh = cfg['logger_conf']['level_consolehandler']
+    _logsize_maxbytes = cfg['logger_conf']['logsize_maxbytes']
+    _backup_count = cfg['logger_conf']['backup_count']
+    #ロガーの生成
+    logger = getLogger('mylog')
+    #出力レベルの設定
+    logger.setLevel(DEBUG)
+    #ハンドラの生成
+    #fh = FileHandler(_logfile_path)
+    fh = RotatingFileHandler(_logfile_path, mode='a', maxBytes=_logsize_maxbytes, backupCount=_backup_count)
+    sh = StreamHandler(sys.stdout)
+    # ハンドラーのレベルを設定
+    ## ファイルハンドラーのレベル設定
+    if _level_fh == 'CRITICAL':
+        fh.setLevel(CRITICAL)
+    elif _level_fh == 'ERROR':
+        fh.setLevel(ERROR)
+    elif _level_fh == 'INFO':
+        fh.setLevel(INFO)
+    elif _level_fh == 'DEBUG':
+        fh.setLevel(DEBUG)
+    else:
+        fh.setLevel(WARNING)
+    ## ストリームハンドラーのレベル設定
+    if _level_sh == 'CRITICAL':
+        sh.setLevel(CRITICAL)
+    elif _level_sh == 'ERROR':
+        sh.setLevel(ERROR)
+    elif _level_sh == 'WARNING' or _level_sh == 'WARN':
+        sh.setLevel(WARNING)
+    elif _level_sh == 'DEBUG':
+        sh.setLevel(DEBUG)
+    else:
+        sh.setLevel(INFO)
+    #ロガーにハンドラを登録
+    logger.addHandler(fh)
+    logger.addHandler(sh)
+    #フォーマッタの生成r
+    fh_fmt = Formatter('%(asctime)s.%(msecs)-3d [%(levelname)s] [%(funcName)s] [Line:%(lineno)d] %(message)s', datefmt="%Y-%m-%dT%H:%M:%S")
+    sh_fmt = Formatter('%(message)s')
+    #ハンドラにフォーマッタを登録
+    fh.setFormatter(fh_fmt)
+    sh.setFormatter(sh_fmt)
+    return logger
 
 # requestsメソッドのレスポンスをHTMLファイルを保存する
 def save_html_file(response):
@@ -325,7 +388,7 @@ def sort_reserves_list(reserves_list):
     return sorted_reserves_list
 
 ## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
-def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list):
+def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list, logger=None):
     """
     予約処理対象の希望日、希望時間帯のリストを作成する
     """
@@ -335,13 +398,13 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
     for _date, _d_value in reserves_list.items():
         # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
         if _date not in want_date_list:
-            print(f'not want day: {_date}')
+            logger.debug(f'not want day: {_date}')
             continue
         # 空き予約時間帯とコートリストを取得する
         for _time, _court_list in _d_value.items():
             # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
             if _time not in want_hour_list:
-                print(f'not want hour: {_date} {_time}')
+                logger.debug(f'not want hour: {_date} {_time}')
                 # 1日1件のみ予約取得したい場合は continueのコメントを削除する
                 #continue
             for _court in _court_list:
@@ -349,22 +412,22 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
                 _location_name = _court.split('／')[0]
                 # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
                 if _location_name not in want_location_list:
-                    print(f'not want location: {_date} {_time} {_court}')
+                    logger.debug(f'not want location: {_date} {_time} {_court}')
                     continue
                 # 希望日+希望時間帯のリストに空き予約日がない場合は初期化語、時間帯を追加する
                 if _date not in target_reserves_list:
                     target_reserves_list[_date] = []
                     target_reserves_list[_date].append(_time)
-                    print(f'regist target reserves list: {_date} {_time} {_court}')
+                    logger.debug(f'regist target reserves list: {_date} {_time} {_court}')
                 # ある場合は時間帯を追加する
                 else:
                     # 同じ時間帯がない場合は時間帯は追加する
                     if _time not in target_reserves_list[_date]:
                         target_reserves_list[_date].append(_time)
-                        print(f'regist target reserves list: {_date} {_time} {_court}')
+                        logger.info(f'regist target reserves list: {_date} {_time} {_court}')
                     else:
                         # 次の時間帯に進む
-                        print(f'found {_time} in target reserves list. therefore next time.')
+                        logger.debug(f'found {_time} in target reserves list. therefore next time.')
                         # breakでコートのループを抜ける
                         break
             else:
@@ -510,7 +573,7 @@ def create_date_list_hachioji(target_months_list, public_holiday, cfg):
 
 # LINEに空き予約を送信する
 ## メッセージ本文の作成
-def create_message_body(reserves_list, message_bodies, cfg):
+def create_message_body(reserves_list, message_bodies, cfg, logger=None):
     """
     LINEに送信するメッセージの本体を作成する
     """
@@ -535,7 +598,7 @@ def create_message_body(reserves_list, message_bodies, cfg):
         #if _time_list == {}:
         if reserves_list[_date] == {}:
             #print(f'reserve empty: {_date} {_time_list}')
-            print(f'reserve empty: {_date} {reserves_list[_date]}')
+            logger.debug(f'reserve empty: {_date} {reserves_list[_date]}')
             continue
         else:
             # 年月日文字列から曜日を判定し、末尾に曜日を付ける
@@ -561,16 +624,16 @@ def create_message_body(reserves_list, message_bodies, cfg):
         _body_date = f'\n空きコートが多いのでWEBでサイトで確かめてください。上記の時間帯に空きコートがあります。\n{_body_date}'
         message_bodies.append(_body_date)
     else:
-        print(f'within {max_message_size} characters.')
+        logger.debug(f'within {max_message_size} characters.')
     # デバッグ: 送信文本体と日付インデックスを表示する
     #print(_body)
     #print(_body_date)
     for _message in message_bodies:
-        print(_message)
+        logger.debug(_message)
     return message_bodies
 
 ## 予約確定通知メッセージの本文を作成する
-def create_reserved_message(userid, reserved_number, reserve, message_bodies, cfg):
+def create_reserved_message(userid, reserved_number, reserve, message_bodies, cfg, logger=None):
     """
     予約確定通知用のメッセージボディーを作成する
     """
@@ -579,7 +642,7 @@ def create_reserved_message(userid, reserved_number, reserve, message_bodies, cf
     _body = f'{_body}利用者ID: {userid}\n'
     _body = f'{_body}予約番号: {reserved_number}\n'
     # 予約リストを与えて、取得した予約情報を追記する
-    message_bodies = create_message_body(reserve, message_bodies, cfg)
+    message_bodies = create_message_body(reserve, message_bodies, cfg, logger=logger)
     # message_bodiesリストの最初の要素が予約情報なので、これを文頭と結合する
     _reserve_info = message_bodies[0]
     _body = f'{_body}{_reserve_info}'
@@ -588,7 +651,7 @@ def create_reserved_message(userid, reserved_number, reserve, message_bodies, cf
     return message_bodies
 
 # LINEにメッセージを送信する
-def send_line_notify(message_bodies, cfg):
+def send_line_notify(message_bodies, cfg, logger=None):
     """
     LINE Notifyを使ってメッセージを送信する
     """
@@ -604,12 +667,12 @@ def send_line_notify(message_bodies, cfg):
             data = {'message': f'{_message}'}
             requests.post(line_notify_api, headers = headers, data = data)
             sleep(1)
-        print(f'sent empty reserves.')
+        logger.info(f'sent empty reserves.')
     else:
         # 空き予約がない場合もメッセージを送信する
         #data = {'message': f'空き予約はありませんでした'}
         #requests.post(line_notify_api, headers = headers, data = data)
-        print(f'not found empty reserves.')
+        logger.debug(f'not found empty reserves.')
 
 # 実行時間を計測する
 def elapsed_time(f):
