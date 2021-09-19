@@ -222,7 +222,7 @@ def get_empty_reserves(response, cfg, day, reserves_list, logger=None):
 
 # コートの空き予約を検索するためのリクエストオブジェクトのリストを作成する
 #@reserve_tools.elapsed_time
-def create_request_objs(cfg, date_list, cookies, form_datas):
+def create_request_objs(cfg, date_list, cookies, form_datas, logger=None):
     """
     指定年月日のリストを引数として、その指定年月日の空き予約を検索するために、
     リクエストオブジェクトのリストを作成する
@@ -233,7 +233,7 @@ def create_request_objs(cfg, date_list, cookies, form_datas):
     threads = cfg['threads_num']
     # リクエストパラメータのリストを初期化する
     request_objs = []
-    print(f'call get_empty_reserves start: ##############')
+    logger.debug(f'call get_empty_reserves start: ##############')
     # リファレンスヘッダーを定義する。これがないと検索できない
     headers_day = { 'Referer': cfg['day_search_url'] }
     #headers_court = { 'Referer': cfg['court_search_url'] }
@@ -395,7 +395,7 @@ def prepare():
     ## 検索対象月リストと祝日リストから検索対象年月日リストを作成する
     date_list = reserve_tools.create_date_list(target_months_list, public_holiday, cfg)
     # 予約希望日リストを作成する
-    want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg)
+    want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg, logger=logger)
     return cfg, logger, date_list, want_date_list
 
 # 検索対象年月日を指定して、空き予約コートがある年月日と空きコートリンクのリストを取得する
@@ -1106,35 +1106,26 @@ if __name__ == '__main__':
     reserves_list = async_lock_reserves.reserves_list
     # 事前準備
     ( cfg, logger, date_list, want_date_list ) = prepare()
+    logger.info(f'starting to search empty reserve.')
     # 同時実行数
     threads = cfg['threads_num']
     ( cookies, form_datas ) = get_cookie(cfg)
     # 空き予約検索データを作成する
-    request_objs = create_request_objs(cfg, date_list, cookies, form_datas)
+    request_objs = create_request_objs(cfg, date_list, cookies, form_datas, logger=logger)
     # 検索対象年月日を指定して、空き年月日のHTMLボディを取得する
     results = main(request_objs, coro=coroutine, limit=threads, logger=logger)
-    # print(f'')
-    # print(f'#### Analyzed Link Start : ####')
-    # print(f'')
     logger.debug(f'')
     logger.debug(f'#### Analyzed Link Start : ####')
     logger.debug(f'')
     # 空きコートのリンクを作成する
     for url, status, body in results:
         get_empty_court(body, cfg, url[0], court_link_list, logger=logger)
-    # print(f'')
-    # print(f'#### Analyzed Link End : ####')
-    # print(f'')
     logger.debug(f'')
     logger.debug(f'#### Analyzed Link End : ####')
     logger.debug(f'')
     #print(json.dumps(court_link_list, indent=2))
     # 実行時間を表示する
     elapsed_time = time.time() - _start
-    # print(f'search empty court link duration time: {elapsed_time} sec')
-    # print(f'')
-    # print(f'#### Analyzed Empty Reserves Start : ####')
-    # print(f'')
     logger.debug(f'search empty court link duration time: {elapsed_time} sec')
     logger.debug(f'')
     logger.debug(f'#### Analyzed Empty Reserves Start : ####')
@@ -1152,24 +1143,20 @@ if __name__ == '__main__':
     sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
     # LINEにメッセージを送信する
     postproc(reserves_list, logger=logger)
-
+    logger.info(f'finished to search empty reserve.')
     # 空き予約リストに値があるかないかを判断し、予約処理を開始する
     #print(f'reserves_list: {threadsafe_list.reserves_list}')
     if len(reserves_list) == 0:
-        #print(f'stop do reserve because no empty reserve.')
         logger.info(f'stop do reserve because no empty reserve.')
     else:
-        #print(f'starting reserve process.')
         logger.info(f'starting reserve process.')
         reserve_result = main3(cfg, sorted_reserves_list, want_date_list, logger=logger)
         #return None
     
     # デバッグ用(HTTPリクエスト回数を表示する)
-    #print(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
     logger.info(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
     # 実行時間を表示する
     elapsed_time = time.time() - _start
-    #print(f'whole() duration time: {elapsed_time} sec')
     logger.info(f'whole() duration time: {elapsed_time} sec')
     
     exit()

@@ -333,7 +333,7 @@ def create_want_day_list(month, public_holiday, cfg):
     return target_days
 
 # 予約希望日リストを作成する
-def create_want_date_list(target_months_list, public_holiday, cfg):
+def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
     """
     予約希望日(実際に予約アクションをする条件)リストを作成する
     """
@@ -347,7 +347,7 @@ def create_want_date_list(target_months_list, public_holiday, cfg):
             # 文字列YYYYMMDDを作成する
             _date = str(_year) + str(_month).zfill(2) + str(_day).zfill(2)
             want_date_list.append(_date)
-    print(f'want_date_list: {want_date_list}')
+    logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
 
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
