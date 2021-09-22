@@ -700,7 +700,7 @@ def do_reserve(cfg, court_map, cookies, date, time, court, logger=None):
     # 予約件数の上限や予約できないコートを申込した場合、予約情報入力ページ(ykr31105.aspx)に移動できず、
     # 元の予約時間帯選択ページ(ykr31104.aspx)に戻るので、responseのurlを確認する
     if f'{response.url}' != f'{cfg["input_reserve_url"]}':
-        logger.info(f'could not select reserve time. reserve entry: {reserve}')
+        logger.warning(f'could not select reserve time. reserve entry: {reserve}')
         # 予約番号をNoneで返し、main3でキャッチする
         return reserved_number, reserve
     # 利用者数を入力し、予約カゴに登録をクリックする
@@ -709,14 +709,14 @@ def do_reserve(cfg, court_map, cookies, date, time, court, logger=None):
     response = go_to_confirm_reserve(cfg, headers, cookies, response)
     # 予約申込可能な場合、予約申込ページ(ykr32001.aspx)に移動できるので、responseのurlを確認する
     if f'{response.url}' != f'{cfg["result_reserve_url"]}':
-        logger.info(f'could not entry reserve. reserve entry: {reserve}')
+        logger.warning(f'could not entry reserve. reserve entry: {reserve}')
         # 予約番号をNoneで返し、main3でキャッチする
         return reserved_number, reserve
     # 予約申込画面で、予約するをクリックする
     response = done_reserve(cfg, headers, cookies, response)
     # 予約が確定した場合、予約確定情報ページ(ykr32002.aspx)に移動できるので、responseのurlを確認する
     if f'{response.url}' != f'{cfg["confirm_reserve_url"]}':
-        logger.info(f'could not confirm reserve. reserve entry: {reserve}')
+        logger.warning(f'could not confirm reserve. reserve entry: {reserve}')
         # 予約番号をNoneで返し、main3でキャッチする
         return reserved_number, reserve
     # 予約できたら、予約番号を取得して、書き換える
