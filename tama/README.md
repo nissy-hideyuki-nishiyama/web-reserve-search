@@ -35,7 +35,7 @@
 - 非同期処理の同時実行数(threads_num)を指定できる
 - 空き予約コート検索において、次を設定できる
   - 検索対象日は曜日で指定する。月曜日(0)から日曜日(6)で、曜日コードで指定する
-  - 個別に登録した日は設定ファイルの"want_month_days"で指定する
+  - 個別に検索したい日は設定ファイルの"want_month_days"で指定する
   - 検索から除外するコートをコートのコード("0040:00004")で指定する
   - 検索から除外する時間帯(06:00～08:00、16:00～17:00)を指定する
 - 予約処理において、次を設定できる
@@ -67,11 +67,12 @@
 - reserve_url: 同上
 - input_reserve_url: 同上
 - result_reserve_url: 同上
+- confirm_reserve_url: 同上
 - cookie_sessionid: 同上
 - cookie_starturl: 同上
 - cookie_auth: 同上
-- search_params: 同上
-- exclude_courts: 空き予約コート検索から除外したいコートのコードを記述する。コードはコート名とコートのコードの対応ファイル(court_map.json)を参照のこと
+- search_params: 同上(奈良原公園(0041)とそれ以外(0040)で検索区分が異なる)
+- exclude_courts: 空き予約コート検索から除外したいコート(一の宮公園)のコードを記述する。コードはコート名とコートのコードの対応ファイル(court_map.json)を参照のこと
 - exclude_times: 空き予約コート検索から除外したい時間帯を指定する
 - line_token: 通知先のLINEグループに参加しているLINE Notifyのトークンコードを指定する
 - line_max_message_size: LINE Notifyの最大文字数(1000文字固定)を指定する
@@ -83,11 +84,12 @@
 - want_month_days: 上記の空きコート予約で検索したい曜日および祝日以外で空きコート予約で検索したい日を指定する
 - exclude_month_days: 予約処理から除外したい日を指定する。空き予約コート検索はできるが、予約処理はしなくなる。
 - exclude_location: 予約処理から除外したいコートを指定する。空き予約コート検索はできるが、予約処理はしなくなる。
-- days_later: プログラム起動日から〇日以降は予約処理しないとする〇日を指定する
+- days_later: プログラム起動日から〇日以降は予約処理対象とする〇日を指定する
 - reserved_limit: 予約上限数(予約開放日前)を指定する
 - reserved_limit_after_open_day: 予約上限数(予約開放日以降)を指定する
 - reserved_limit_for_next_month: 翌月土日予約上限数(予約開放日前)を指定する
 - reserved_limit_for_next_month_after_open_day: 翌月土日予約上限数(予約開放日以降)を指定する
+- reserved_limit_in_same_day: 同日予約できる上限数を指定する。多摩市は同日で2件まで。
 - userauth: 予約処理に使う利用者IDとパスワードを指定する。admin(管理者), inner(市内在住者), outer(市外居住者)のタイプがある。ID:PASSWORDとなっている
 - want_location_list: 予約したいコート名を指定する。優先順位の高いものから並べる
 - want_hour_list: 予約したい時間帯を指定する。
@@ -105,6 +107,7 @@
     "reserve_url": "https://www.task-asp.net/cu/ykr132241/app/ykr30000/ykr31104.aspx",
     "input_reserve_url": "https://www.task-asp.net/cu/ykr132241/app/ykr30000/ykr31105.aspx",
     "result_reserve_url": "https://www.task-asp.net/cu/ykr132241/app/ykr30000/ykr32001.aspx",
+    "confirm_reserve_url": "https://www.task-asp.net/cu/ykr132241/app/ykr30000/ykr32002.aspx",
     "cookie_sessionid": "taskasp_cu_ykr_sessionid",
     "cookie_starturl" : "taskasp_cu_ykr_starturl",
     "cookie_auth": "taskasp_cu_ykr_auth",
@@ -169,6 +172,7 @@
     "reserved_limit_after_open_day": 15,
     "reserved_limit_for_next_month": 2,
     "reserved_limit_for_next_month_after_open_day": 15,
+    "reserved_limit_in_same_day": 2,
     "userauth": {
       "admin": {
         "1234": "password"
