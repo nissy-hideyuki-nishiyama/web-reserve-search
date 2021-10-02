@@ -1316,7 +1316,7 @@ def main():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg3.json')
+    cfg = reserve_tools.read_json_cfg('cfg.json')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
     # スレッド数を設定する
