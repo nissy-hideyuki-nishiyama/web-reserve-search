@@ -938,8 +938,8 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
             # 空きコートリストは逆順で辿る
             for _court in reversed(court_list):
                 _location = _court.split(sep='／')[0]
-                #print(f'want location : {_want_location}')
-                #print(f'found court name: {_court}')
+                #logger.debug(f'want location : {_want_location}')
+                #logger.debug(f'found court name: {_court}')
                 if _want_location == _location:
                     # 一致したコートに対するコートリストのindex番号を取得する
                     _want_index = court_list.index(_court)
@@ -963,8 +963,9 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
             ( form_data, court_list ) = get_formdata_rsvEmptyState(response)
     # 希望する空きコートが見つからなかった場合はreturnする
     if _matched == False:
-        logger.info(f'not found want date time location. therefore this sript is finished')
+        logger.info(f'not found want date time location. therefore this script is finished')
         response = None
+        _court = None
         return response, _court, _matched
     # 予約カートに希望コートを追加する処理を開始する
     # 希望する空きコートのインデっクス値に変更する
@@ -1315,7 +1316,7 @@ def main():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg.json')
+    cfg = reserve_tools.read_json_cfg('cfg3.json')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
     # スレッド数を設定する
@@ -1346,7 +1347,7 @@ def main():
         logger.info(f'stop do reserve because no empty reserve.')
         return logger
     # 予約希望日リストを作成する
-    want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg)
+    want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg, logger=logger)
     # 希望時間帯を取得する
     want_hour_list = cfg['want_hour_list']
     # 希望施設名を取得する
@@ -1355,7 +1356,7 @@ def main():
     # 空き予約リストを昇順にソートする
     sorted_reserves_list = reserve_tools.sort_reserves_list(threadsafe_list.reserves_list)
     # 空き予約リストから、空き予約日と時間帯を取得する
-    target_reserves_list = reserve_tools.create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+    target_reserves_list = reserve_tools.create_target_reserves_list(sorted_reserves_list, want_date_list, want_hour_list, want_location_list, logger=logger)
     # 希望日+希望時間帯のリストを出力する
     logger.info(f'target_reserves_list: {target_reserves_list}')
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
@@ -1375,7 +1376,7 @@ def main():
         for _userid, _password in _type_list.items():
             logger.info(f'UserID:{_userid}, PASS:{_password} is logined.')
             # ログインIDを使ってログインし、事前準備をする
-            ( cookies, headers, response ) = prepare_reserve(cfg, _userid, _password)
+            ( cookies, headers, response ) = prepare_reserve(cfg, _userid, _password, logger=logger)
             # マイページから既存予約情報を取得する
             reserved_list = get_reserved_info(cfg, response, logger=logger)
             #exit()

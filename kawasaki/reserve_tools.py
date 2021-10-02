@@ -104,7 +104,7 @@ def mylogger(cfg):
     #ロガーにハンドラを登録
     logger.addHandler(fh)
     logger.addHandler(sh)
-    #フォーマッタの生成r
+    #フォーマッタの生成
     fh_fmt = Formatter('%(asctime)s.%(msecs)-3d [%(levelname)s] [%(funcName)s] [Line:%(lineno)d] %(message)s', datefmt="%Y-%m-%dT%H:%M:%S")
     sh_fmt = Formatter('%(message)s')
     #ハンドラにフォーマッタを登録
