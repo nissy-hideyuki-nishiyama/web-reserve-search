@@ -1322,7 +1322,7 @@ def main():
     # スレッド数を設定する
     threads_num = cfg['threads_num']
     # 検索対象月を取得する
-    target_months_list = reserve_tools.create_month_list(cfg)
+    target_months_list = reserve_tools.create_month_list(cfg, logger=logger)
     # 検索年月日時間を取得する
     datetime_list = create_datetime_list(target_months_list, public_holiday, cfg, logger=logger)
     # threadsに応じたcookieとフォームデータを取得する

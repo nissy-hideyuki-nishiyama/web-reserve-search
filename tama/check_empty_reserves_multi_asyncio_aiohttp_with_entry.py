@@ -391,11 +391,13 @@ def prepare():
     logger = reserve_tools.mylogger(cfg)
     # 検索リストを作成する
     ## 検索対象月を取得する
-    target_months_list = reserve_tools.create_month_list(cfg)
+    target_months_list = reserve_tools.create_month_list(cfg, logger=logger)
     ## 検索対象月リストと祝日リストから検索対象年月日リストを作成する
     date_list = reserve_tools.create_date_list(target_months_list, public_holiday, cfg)
+    logger.debug(f'date_list: {date_list}')
     # 予約希望日リストを作成する
     want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg, logger=logger)
+    logger.debug(f'want_date_list: {want_date_list}')
     return cfg, logger, date_list, want_date_list
 
 # 検索対象年月日を指定して、空き予約コートがある年月日と空きコートリンクのリストを取得する

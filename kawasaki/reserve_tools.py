@@ -149,11 +149,10 @@ def check_new_year(month):
         year = _this_year + 1
     else:
         year = _this_year
-    #print(f'Yert: {year}')
+    #print(f'Year: {year}')
     return year
- 
 # 検索対象月のリストを作成する
-def create_month_list(cfg):
+def create_month_list(cfg, logger=None):
     """
     検索対象月のリストを作成する
     今日の日付を取得し、当月、翌月のリストを作成する
@@ -161,30 +160,23 @@ def create_month_list(cfg):
     """
     # タイムゾーンを設定する
     JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
-    # ふれあいネットの検索期間および起点日の設定
+    # 検索対象期間と起点日を設定する
     month_num = cfg['month_period']
     start_day = cfg['start_day']
-    # 月リスト
-    month_list = ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6 )
-    # 検索対象期間と起点日を設定する
-    month_period = cfg['month_period']
-    start_day = cfg['start_day']
+    # 初期化する
+    target_months = []
     # 現在の時刻を取得し、検索対象月を取得する
     _now = datetime.datetime.now(JST)
-    _start_num = _now.month - 1
-    # 予約開始日以降の場合は検索対象月を増やす
-    if _now.day >= start_day:
-        _end_num = _start_num + month_num
-        target_months = month_list[_start_num:_end_num]
-    else:
-        _end_num = _start_num + month_num - 1
-        target_months = month_list[_start_num:_end_num]
-    #print(f'{_start_num} , {_end_num}')
+    # 予約開始日より前の場合は、検索対象月を1か月減らす
+    if _now.day < start_day:
+        month_num = month_num - 1
+    for _num in range(month_num):
+        # 月を取得し、対象月リストに追加する
+        target_month = _now + relativedelta(months=+_num)
+        #logger.debug(f'target_month: {target_month} / _num: {_num}')
+        target_months.append(target_month.month)
     # 検索対象月のタプルを作成する
-    #target_months = month_list[_start_num:_end_num]
-    #print(f'{target_months}')
-    # 年越処理のために、年数に1を追加する
-    #next_year = _now.year + 1
+    #logger.debug(f'target months: {target_months}')
     return target_months
 
 # 今日と翌月1日(YYYYMM)の文字列を取得する
@@ -548,7 +540,7 @@ def create_year_month_list(target_month_list):
 
 # 東京都八王子向け
 # 年月日(YYYY/MM/DD)の入力リストを作成する
-def create_date_list_hachioji(target_months_list, public_holiday, cfg):
+def create_date_list_hachioji(target_months_list, public_holiday, cfg, logger=None):
     """ 
     入力データとなる年月日日時のリストを作成する
     """
@@ -568,7 +560,7 @@ def create_date_list_hachioji(target_months_list, public_holiday, cfg):
             # YYYYMMDDの文字列を作成する
             _date = str(_year) + '/' + str(_month).zfill(2) + '/' + str(_day).zfill(2)
             date_list.append(_date)
-    print(date_list)
+    logger.debug(date_list)
     return date_list
 
 # LINEに空き予約を送信する

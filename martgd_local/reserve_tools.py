@@ -3,10 +3,13 @@
 from time import sleep
 import math
 import datetime
+#from datetime import datetime, date, timedelta 
 import calendar
+from dateutil.relativedelta import relativedelta
 
-## ファイルIO、ディレクトリ関連
+## ファイルIO、ディレクトリ関連　
 import os
+import sys
 
 ## JSON関連
 import json
@@ -17,6 +20,15 @@ import requests
 ## 処理時間の計測関連
 from functools import wraps
 import time
+
+# ログ関連
+from logging import (
+    getLogger,
+    StreamHandler,
+    Formatter,
+    DEBUG, INFO, WARNING, ERROR, CRITICAL
+)
+from logging.handlers import RotatingFileHandler
 
 # 設定ファイルの読み込み
 ## 祝日ファイル
@@ -46,6 +58,59 @@ def read_json_cfg(cfg_file_name):
         #print(f'Config:\n')
         #print(cfg)
         return cfg
+
+# loggerの設定
+def mylogger(cfg):
+    """
+    ロガーを定義し、ロガーのインスタンスを返す
+    """
+    # cfg から設定パラメータを取り出す
+    _logfile_path = cfg['logger_conf']['logfile_path']
+    _level_fh = cfg['logger_conf']['level_filehandler']
+    _level_sh = cfg['logger_conf']['level_consolehandler']
+    _logsize_maxbytes = cfg['logger_conf']['logsize_maxbytes']
+    _backup_count = cfg['logger_conf']['backup_count']
+    #ロガーの生成
+    logger = getLogger('mylog')
+    #出力レベルの設定
+    logger.setLevel(DEBUG)
+    #ハンドラの生成
+    #fh = FileHandler(_logfile_path)
+    fh = RotatingFileHandler(_logfile_path, mode='a', maxBytes=_logsize_maxbytes, backupCount=_backup_count)
+    sh = StreamHandler(sys.stdout)
+    # ハンドラーのレベルを設定
+    ## ファイルハンドラーのレベル設定
+    if _level_fh == 'CRITICAL':
+        fh.setLevel(CRITICAL)
+    elif _level_fh == 'ERROR':
+        fh.setLevel(ERROR)
+    elif _level_fh == 'INFO':
+        fh.setLevel(INFO)
+    elif _level_fh == 'DEBUG':
+        fh.setLevel(DEBUG)
+    else:
+        fh.setLevel(WARNING)
+    ## ストリームハンドラーのレベル設定
+    if _level_sh == 'CRITICAL':
+        sh.setLevel(CRITICAL)
+    elif _level_sh == 'ERROR':
+        sh.setLevel(ERROR)
+    elif _level_sh == 'WARNING' or _level_sh == 'WARN':
+        sh.setLevel(WARNING)
+    elif _level_sh == 'DEBUG':
+        sh.setLevel(DEBUG)
+    else:
+        sh.setLevel(INFO)
+    #ロガーにハンドラを登録
+    logger.addHandler(fh)
+    logger.addHandler(sh)
+    #フォーマッタの生成
+    fh_fmt = Formatter('%(asctime)s.%(msecs)-3d [%(levelname)s] [%(funcName)s] [Line:%(lineno)d] %(message)s', datefmt="%Y-%m-%dT%H:%M:%S")
+    sh_fmt = Formatter('%(message)s')
+    #ハンドラにフォーマッタを登録
+    fh.setFormatter(fh_fmt)
+    sh.setFormatter(sh_fmt)
+    return logger
 
 # requestsメソッドのレスポンスをHTMLファイルを保存する
 def save_html_file(response):
@@ -84,11 +149,10 @@ def check_new_year(month):
         year = _this_year + 1
     else:
         year = _this_year
-    #print(f'Yert: {year}')
+    #print(f'Year: {year}')
     return year
- 
 # 検索対象月のリストを作成する
-def create_month_list(cfg):
+def create_month_list(cfg, logger=None):
     """
     検索対象月のリストを作成する
     今日の日付を取得し、当月、翌月のリストを作成する
@@ -96,31 +160,47 @@ def create_month_list(cfg):
     """
     # タイムゾーンを設定する
     JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
-    # ふれあいネットの検索期間および起点日の設定
+    # 検索対象期間と起点日を設定する
     month_num = cfg['month_period']
     start_day = cfg['start_day']
-    # 月リスト
-    month_list = ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6 )
-    # 検索対象期間と起点日を設定する
-    month_period = cfg['month_period']
-    start_day = cfg['start_day']
+    # 初期化する
+    target_months = []
     # 現在の時刻を取得し、検索対象月を取得する
     _now = datetime.datetime.now(JST)
-    _start_num = _now.month - 1
-    # 予約開始日以降の場合は検索対象月を増やす
-    if _now.day >= start_day:
-        _end_num = _start_num + month_num
-        target_months = month_list[_start_num:_end_num]
-    else:
-        _end_num = _start_num + month_num - 1
-        target_months = month_list[_start_num:_end_num]
-    #print(f'{_start_num} , {_end_num}')
+    # 予約開始日より前の場合は、検索対象月を1か月減らす
+    if _now.day < start_day:
+        month_num = month_num - 1
+    for _num in range(month_num):
+        # 月を取得し、対象月リストに追加する
+        target_month = _now + relativedelta(months=+_num)
+        #logger.debug(f'target_month: {target_month} / _num: {_num}')
+        target_months.append(target_month.month)
     # 検索対象月のタプルを作成する
-    #target_months = month_list[_start_num:_end_num]
-    #print(f'{target_months}')
-    # 年越処理のために、年数に1を追加する
-    #next_year = _now.year + 1
+    #logger.debug(f'target months: {target_months}')
     return target_months
+
+# 今日と翌月1日(YYYYMM)の文字列を取得する
+def get_today_and_netx_month_string():
+    """
+    翌月(YYYYMM)の文字列を取得する
+    """
+    # 今日の年月日を取得する# タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の年月を取得する
+    _now = datetime.datetime.now(JST)
+    _this_year = str(_now.year)
+    _this_month = str(_now.month).zfill(2)
+    _this_day = str(_now.day).zfill(2)
+    _this_yyyymm = str(_this_year + _this_month)
+    _today = str(_this_year + _this_month + _this_day)
+    # 今月の1日を取得してから翌月1日を取得する
+    _next_firstday = datetime.datetime.today().replace(day=1) + relativedelta(months=+1)
+    _next_year = str(_next_firstday.year)
+    _next_month = str(_next_firstday.month).zfill(2)
+    _next_day = str(_next_firstday.day).zfill(2)
+    _next_month_firstday = str(_next_year + _next_month + _next_day)
+    #print(f'today:{_today}, next_month_firstday:{_next_month_firstday}')
+    return _today, _next_month_firstday
 
 # 検索対象月の希望曜日・祝日・希望日のリストを作成する
 def create_day_list(month, public_holiday, cfg):
@@ -245,7 +325,7 @@ def create_want_day_list(month, public_holiday, cfg):
     return target_days
 
 # 予約希望日リストを作成する
-def create_want_date_list(target_months_list, public_holiday, cfg):
+def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
     """
     予約希望日(実際に予約アクションをする条件)リストを作成する
     """
@@ -259,7 +339,7 @@ def create_want_date_list(target_months_list, public_holiday, cfg):
             # 文字列YYYYMMDDを作成する
             _date = str(_year) + str(_month).zfill(2) + str(_day).zfill(2)
             want_date_list.append(_date)
-    print(f'want_date_list: {want_date_list}')
+    logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
 
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
@@ -279,6 +359,75 @@ def get_weekday_from_datestring(datestring):
     wd = dt.strftime('%a')
     #print(f'{dt}, {wd}')
     return dt, wd
+
+## 空き予約リストを昇順に並べ替える
+def sort_reserves_list(reserves_list):
+    """
+    空き予約リストを昇順に並べ変える
+    """
+    sorted_reserves_list = {}
+    _sort_date = []
+    # 日付順に並び変えたリストを作成する
+    sorted_date = sorted(reserves_list.keys())
+    for _date in sorted_date:
+        sorted_reserves_list[_date] = {}
+        for _time, _location_list in sorted(reserves_list[_date].items()):
+            # 昇順にソートして、重複を取り除く(非同期処理の弊害)
+            _sorted_location_list = sorted(list(set(_location_list)))
+            sorted_reserves_list[_date][_time] = _sorted_location_list
+    # 昇順に並び変えた予約リストを返す
+    print(json.dumps(sorted_reserves_list, indent=2, ensure_ascii=False))
+    return sorted_reserves_list
+
+## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
+def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, want_location_list, logger=None):
+    """
+    予約処理対象の希望日、希望時間帯のリストを作成する
+    """
+    # 希望日+希望時間帯のリストを初期化する
+    target_reserves_list = {}
+    # 空き予約リストから、空き予約日と値を取得する
+    for _date, _d_value in reserves_list.items():
+        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
+        if _date not in want_date_list:
+            logger.debug(f'not want day: {_date}')
+            continue
+        # 空き予約時間帯とコートリストを取得する
+        for _time, _court_list in _d_value.items():
+            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
+            if _time not in want_hour_list:
+                logger.debug(f'not want hour: {_date} {_time}')
+                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
+                #continue
+            for _court in _court_list:
+                # 空きコート名から、施設名とコート名に分割する
+                _location_name = _court.split('／')[0]
+                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
+                if _location_name not in want_location_list:
+                    logger.debug(f'not want location: {_date} {_time} {_court}')
+                    continue
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化語、時間帯を追加する
+                if _date not in target_reserves_list:
+                    target_reserves_list[_date] = []
+                    target_reserves_list[_date].append(_time)
+                    logger.debug(f'regist target reserves list: {_date} {_time} {_court}')
+                # ある場合は時間帯を追加する
+                else:
+                    # 同じ時間帯がない場合は時間帯は追加する
+                    if _time not in target_reserves_list[_date]:
+                        target_reserves_list[_date].append(_time)
+                        logger.info(f'regist target reserves list: {_date} {_time} {_court}')
+                    else:
+                        # 次の時間帯に進む
+                        logger.debug(f'found {_time} in target reserves list. therefore next time.')
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
+    # 希望日+希望時間帯のリストを返す
+    #print(f'{target_reserves_list}')
+    return target_reserves_list
 
 # 東京都多摩市向け
 # 年月日(YYYYMMDD)の入力リストを作成する
@@ -303,6 +452,52 @@ def create_date_list(target_months_list, public_holiday, cfg):
             date_list.append(_date)
     #print(date_list)
     return date_list
+
+# 予約上限数と翌月の予約上限数を取得する
+def get_reserved_limit(cfg):
+    """
+    予約上限数を取得する
+    開放日(cfg['open_day'])以降は予約上限数をcfg['reserved_limit_after']の値とする
+    開放日前は予約上限数をcfg['reserved_limit_after_open_day']の値とする
+    """
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の日付を取得する
+    _now = datetime.datetime.now(JST)
+    #_this_year = _now.year
+    #_this_month = _now.month
+    _today = _now.day
+    # 今日の日付から予約上限数を取得する
+    if _today < cfg['open_day']:
+        reserved_limit = cfg['reserved_limit']
+        reserved_limit_for_next_month = cfg['reserved_limit_for_next_month']
+    else:
+        reserved_limit = cfg['reserved_limit_after_open_day']
+        reserved_limit_for_next_month = cfg['reserved_limit_for_next_month_after_open_day']
+    return reserved_limit, reserved_limit_for_next_month
+
+# 予約処理をする利用者IDリストを作成する
+def get_userauth_dict(cfg):
+    """
+    利用者IDリストを作成する。ID:PASSWORDのdict型で作成する
+    開放日(cfg['open_day'])以降はadmin、inner(市内在住者)、outer(市外居住者)を利用者IDリストとする
+    開放日以前はadmin、innerとする
+    """
+    # 利用者IDリストを初期化する
+    userauth = cfg['userauth']
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 今日の日付を取得する
+    _now = datetime.datetime.now(JST)
+    #_this_year = _now.year
+    #_this_month = _now.month
+    _today = _now.day
+    # 今日の日付から予約上限数を取得する
+    if _today < cfg['open_day']:
+        # 市外居住者のIDを削除する
+        del userauth['outers']
+    #print(f'userauth: {userauth}')
+    return userauth
 
 # 調布市向け
 # 監視対象日の年月日リストの2次元配列([[YYYY, MM, DD], [YYYY, MM, DD], ...])を作成する
@@ -345,7 +540,7 @@ def create_year_month_list(target_month_list):
 
 # 東京都八王子向け
 # 年月日(YYYY/MM/DD)の入力リストを作成する
-def create_date_list_hachioji(target_months_list, public_holiday, cfg):
+def create_date_list_hachioji(target_months_list, public_holiday, cfg, logger=None):
     """ 
     入力データとなる年月日日時のリストを作成する
     """
@@ -365,12 +560,12 @@ def create_date_list_hachioji(target_months_list, public_holiday, cfg):
             # YYYYMMDDの文字列を作成する
             _date = str(_year) + '/' + str(_month).zfill(2) + '/' + str(_day).zfill(2)
             date_list.append(_date)
-    print(date_list)
+    logger.debug(date_list)
     return date_list
 
 # LINEに空き予約を送信する
 ## メッセージ本文の作成
-def create_message_body(reserves_list, message_bodies, cfg):
+def create_message_body(reserves_list, message_bodies, cfg, logger=None):
     """
     LINEに送信するメッセージの本体を作成する
     """
@@ -395,7 +590,7 @@ def create_message_body(reserves_list, message_bodies, cfg):
         #if _time_list == {}:
         if reserves_list[_date] == {}:
             #print(f'reserve empty: {_date} {_time_list}')
-            print(f'reserve empty: {_date} {reserves_list[_date]}')
+            logger.debug(f'reserve empty: {_date} {reserves_list[_date]}')
             continue
         else:
             # 年月日文字列から曜日を判定し、末尾に曜日を付ける
@@ -421,16 +616,34 @@ def create_message_body(reserves_list, message_bodies, cfg):
         _body_date = f'\n空きコートが多いのでWEBでサイトで確かめてください。上記の時間帯に空きコートがあります。\n{_body_date}'
         message_bodies.append(_body_date)
     else:
-        print(f'within {max_message_size} characters.')
+        logger.debug(f'within {max_message_size} characters.')
     # デバッグ: 送信文本体と日付インデックスを表示する
     #print(_body)
     #print(_body_date)
     for _message in message_bodies:
-        print(_message)
+        logger.debug(_message)
+    return message_bodies
+
+## 予約確定通知メッセージの本文を作成する
+def create_reserved_message(userid, reserved_number, reserve, message_bodies, cfg, logger=None):
+    """
+    予約確定通知用のメッセージボディーを作成する
+    """
+    # メッセージ本文の文頭を作成する
+    _body = f'\n予約が確定しました。マイページで確認してください。\n'
+    _body = f'{_body}利用者ID: {userid}\n'
+    _body = f'{_body}予約番号: {reserved_number}\n'
+    # 予約リストを与えて、取得した予約情報を追記する
+    message_bodies = create_message_body(reserve, message_bodies, cfg, logger=logger)
+    # message_bodiesリストの最初の要素が予約情報なので、これを文頭と結合する
+    _reserve_info = message_bodies[0]
+    _body = f'{_body}{_reserve_info}'
+    # message_bodiesリストの最初の要素を書き換える
+    message_bodies[0] = f'{_body}'
     return message_bodies
 
 # LINEにメッセージを送信する
-def send_line_notify(message_bodies, cfg):
+def send_line_notify(message_bodies, cfg, logger=None):
     """
     LINE Notifyを使ってメッセージを送信する
     """
@@ -446,12 +659,12 @@ def send_line_notify(message_bodies, cfg):
             data = {'message': f'{_message}'}
             requests.post(line_notify_api, headers = headers, data = data)
             sleep(1)
-        print(f'sent empty reserves.')
+        logger.info(f'sent empty reserves.')
     else:
         # 空き予約がない場合もメッセージを送信する
         #data = {'message': f'空き予約はありませんでした'}
         #requests.post(line_notify_api, headers = headers, data = data)
-        print(f'not found empty reserves.')
+        logger.debug(f'not found empty reserves.')
 
 # 実行時間を計測する
 def elapsed_time(f):
@@ -467,7 +680,6 @@ def elapsed_time(f):
         print(f"{f.__name__}: {time.time() - start} sec")
         return v
     return wrapper
-
 
 # メインルーチン
 def main():
