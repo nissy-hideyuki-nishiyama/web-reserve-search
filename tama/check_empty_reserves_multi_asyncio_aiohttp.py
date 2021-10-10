@@ -191,7 +191,7 @@ def get_empty_reserves(response, cfg, day, reserves_list):
         reserve = re.sub('^\D+', '', empty_string)
         # 一桁の時間帯の文字列に0を入れる
         reserve = re.sub('^(\d):', r'0\1:', reserve)
-        reserve = re.sub('～(\d):', r'～0\1:', reserve)
+        reserve = re.sub('～\s(\d):', r'～0\1:', reserve)
         # 空き予約の除外時間帯かを確認し、除外時間帯以外を登録する
         _match_count = 0
         _exclude_time_count = len(cfg['exclude_times'])

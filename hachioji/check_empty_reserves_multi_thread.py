@@ -66,7 +66,7 @@ def setup_driver(headers):
     return driver , mouse
 
 @reserve_tools.elapsed_time
-def selenium_get_cookie(driver, cfg):
+def selenium_get_cookie(driver, cfg, logger=None):
     """
     selenuimuで接続する
     cookieおよび_ncforminfoの値を取得する
@@ -79,15 +79,15 @@ def selenium_get_cookie(driver, cfg):
     http_req_num += 1
     sleep(1)
     cookies = driver.get_cookies()
-    #print(cookies)
-    #print(type(response))
-    #print(dir(response))
+    #logger.debug(f'{cookies}')
+    #logger.debug(type(response))
+    #logger.debug(dir(response))
     # 画面のtitleを確認する
     assert '施設の空き状況や予約ができる 八王子市施設予約システム' in driver.title
     return cookies , response
 
 @reserve_tools.elapsed_time
-def selenium_go_to_search_menu(driver, mouse, cfg, cookies):
+def selenium_go_to_search_menu(driver, mouse, cfg, cookies, logger=None):
     """
     空き状況を検索ページに移動する。
     「空き状況を検索」ボタンをクリックする
@@ -104,7 +104,7 @@ def selenium_go_to_search_menu(driver, mouse, cfg, cookies):
     return None
 
 @reserve_tools.elapsed_time
-def selenium_post_conditions(driver, date_list, reserves_list, cfg):
+def selenium_post_conditions(driver, date_list, reserves_list, cfg, logger=None):
     """
     取得したcookieを設定して、空き予約情報を取得する
     """
@@ -116,10 +116,10 @@ def selenium_post_conditions(driver, date_list, reserves_list, cfg):
     #for key, value in input_data_list.item():
     # 検索日を指定して、空き予約を取得する
     for _date in date_list:
-        #print(f'research: {key}: {value}')
+        #logger.debug(f'research: {key}: {value}')
         f_date = _date.replace('/', '')
         # 空き予約を検索する
-        selenium_input_datas(driver, _date)
+        selenium_input_datas(driver, _date, logger=logger)
         # 検索結果をHTMLソースとしてオブジェクトに保存する
         _html = driver.page_source
         # デバッグ用にHTMLファイルを保存する
@@ -127,17 +127,17 @@ def selenium_post_conditions(driver, date_list, reserves_list, cfg):
         #sleep(1)
         # HTML解析を実行し、空き予約名リストを作成する
         #get_empty_court_time(cfg, reserves_list, _date, _html)
-        get_empty_court_time(cfg, reserves_list, f_date, _html)
+        get_empty_court_time(cfg, reserves_list, f_date, _html, logger=logger)
         # 条件をクリア ボタンをクリックして、次の検索の準備をする
 
     # 空き予約名リストを表示する
-    #print(f'Court_Reserve_List:\n{reserves_list}')
+    #logger.debug(f'Court_Reserve_List:\n{reserves_list}')
     return reserves_list
 
 
 # 検索ページに検索条件を入力して、検索を結果を取得する
 @reserve_tools.elapsed_time
-def selenium_input_datas(driver, input_date):
+def selenium_input_datas(driver, input_date, logger=None):
     """
     検索条件を入力し、空き予約を検索し、検索結果を取得する
     """
@@ -184,7 +184,7 @@ def selenium_input_datas(driver, input_date):
 # 指定した年月日のコート空き予約ページから空き予約の時間帯を取得する
 @reserve_tools.elapsed_time
 #def get_empty_court_time(cfg, reserves_list, date, html):
-def get_empty_court_time(cfg, threadsafe_list, date, html):
+def get_empty_court_time(cfg, threadsafe_list, date, html, logger=None):
     """
     空き予約日のコート番号と時間帯を取得する
     """
@@ -198,16 +198,16 @@ def get_empty_court_time(cfg, threadsafe_list, date, html):
         _regist_flag = 0
         # 空き予約の時間帯を取得する
         _time = _tag.parent.previous_sibling.string
-        #print(_time)
+        #logger.debug(f'time: {_time}')
         # 空き予約のコート名を取得する
         _court = _tag.find_parent("section").find("h4").contents[1]
-        #print(_court)
+        #logger.debug(f'court: {_court}')
         # 空き予約の時間帯とコートの両方が除外リストに含まれていない場合のみ空き予約リストに登録する
         # 除外時間帯か確認する
         #_exclude_time_count = len(cfg['exclude_times'])
         for _exclude_time in cfg['exclude_times']:
             if _time == _exclude_time:
-                #print(f'matched exclude time: {_court} {_time}')
+                #logger.debug(f'matched exclude time: {_court} {_time}')
                 _regist_flag = 1
                 break
         # 除外コートか確認する
@@ -215,7 +215,7 @@ def get_empty_court_time(cfg, threadsafe_list, date, html):
         for _exclude_court in cfg['exclude_courts']:
             # 除外コートの文字列が含まれているか確認する
             if _exclude_court in _court:
-                #print(f'matched exclude court: {_court} {_time}')
+                #logger.debug(f'matched exclude court: {_court} {_time}')
                 _regist_flag = 1
                 break
         # 空き予約リストに登録する
@@ -225,12 +225,12 @@ def get_empty_court_time(cfg, threadsafe_list, date, html):
                 #reserves_list[f'{date}'] = {}
                 #reserves_list[f'{date}'].setdefault(_time, []).append(_court)
                 # スレッドセーフな空き予約リストに追加する
-            threadsafe_list.add_reserves(date, _time, _court)
-    #print(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
+            threadsafe_list.add_reserves(date, _time, _court, logger=logger)
+    #logger.debug(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
     return None
 
 # スレッド数に応じて、検索対象年月日を分割する
-def split_date_list(date_list, threads_num=1):
+def split_date_list(date_list, threads_num=1, logger=None):
     """
     スレッド数に応じて、検索対象年月日を分割する
     """
@@ -239,7 +239,7 @@ def split_date_list(date_list, threads_num=1):
     date_list_threads = []
     for _empty_list in range(threads_num):
         date_list_threads.append([])
-    #print(f'date_list_threads: {date_list_threads}')
+    #logger.debug(f'date_list_threads: {date_list_threads}')
     # date_list_threads のインデックスを初期化する
     _th_index = 0
     # 分割する
@@ -247,12 +247,12 @@ def split_date_list(date_list, threads_num=1):
         _index = int(_th_index) % int(threads_num)
         date_list_threads[_index].append(_date)
         _th_index += 1
-    print(f'date_list_threads: {date_list_threads}')
+    #logger.info(f'date_list_threads: {date_list_threads}')
     return date_list_threads
 
 # webdriver初期化から空き予約検索、webdriver終了の一連の動作をする
 @reserve_tools.elapsed_time
-def date_search(cfg, headers, date_list, threadsafe_list):
+def date_search(cfg, headers, date_list, threadsafe_list, logger=None):
     """
     webdriverを初期化する
     cookieを取得する
@@ -264,18 +264,17 @@ def date_search(cfg, headers, date_list, threadsafe_list):
     # クローラーの初期化
     ( driver, mouse ) = setup_driver(headers)
     # 空き予約ページにアクセスし、cookieを取得する
-    #( cookies , response )= get_cookie(cfg)
-    ( cookies , response )= selenium_get_cookie(driver, cfg)
+    ( cookies , response )= selenium_get_cookie(driver, cfg, logger=logger)
     # 空き状況を検索するページに移動する
-    selenium_go_to_search_menu(driver, mouse, cfg, cookies)
+    selenium_go_to_search_menu(driver, mouse, cfg, cookies, logger=logger)
     # 条件を指定して、空き予約を取得する
-    threadsafe_list = selenium_post_conditions(driver, date_list, threadsafe_list, cfg)
+    threadsafe_list = selenium_post_conditions(driver, date_list, threadsafe_list, cfg, logger=logger)
     driver.quit()
     return threadsafe_list
 
 # マルチスレッドで、空き予約を検索する
 @reserve_tools.elapsed_time
-def multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=1):
+def multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=1, logger=None):
     """
     マルチスレッドで次のことを実施する
     webdriverを初期化する
@@ -287,12 +286,12 @@ def multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, th
     """
     # 実行結果を入れるオブジェクトの初期化
     futures = []
-    #print(f'スレッド数: {threads}')
+    #logger.debug(f'スレッド数: {threads}')
     with ThreadPoolExecutor(max_workers=threads_num) as executor:
         #_index = 0
         for date_list in date_list_threads:
             # スレッド数に応じて分割した検索対象年月日リストを受け取って、検索する
-            future = executor.submit(date_search, cfg, headers, date_list, threadsafe_list)
+            future = executor.submit(date_search, cfg, headers, date_list, threadsafe_list, logger=logger)
             futures.append(future)
         for future in as_completed(futures):
             future.result()
@@ -303,7 +302,7 @@ class ThreadSafeReservesList:
     lock = threading.Lock()
     def __init__(self):
         self.reserves_list = {}
-    def add_reserves(self, _date, _time, _locate_court):
+    def add_reserves(self, _date, _time, _locate_court, logger=None):
         with self.lock:
             # 空き予約リストに追加する
             # 空き予約リストに発見した日がなければ、年月日をキーとして初期化する
@@ -316,7 +315,7 @@ class ThreadSafeReservesList:
                 if _time not in self.reserves_list[_date]:
                     self.reserves_list[_date][_time] = []
                 self.reserves_list[_date][_time].append(_locate_court)
-            #print(self.reserves_list)
+            #logger.debug(f'{self.reserves_list}')
 
 # メインルーチン
 def main():
@@ -340,15 +339,19 @@ def main():
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
     cfg = reserve_tools.read_json_cfg('cfg.json')
+    # ロギングを設定する
+    logger = reserve_tools.mylogger(cfg)
     # スレッド数を設定する
     threads_num = cfg['threads_num']
     # 検索リストを作成する
-    target_months_list = reserve_tools.create_month_list(cfg)
-    #datetime_list = create_datetime_list(target_months_list, public_holiday, cfg)
-    date_list = reserve_tools.create_date_list_hachioji(target_months_list, public_holiday, cfg)
+    target_months_list = reserve_tools.create_month_list(cfg, logger=logger)
+    logger.debug(f'target months: {target_months_list}')
+    date_list = reserve_tools.create_date_list_hachioji(target_months_list, public_holiday, cfg, logger=logger)
+    logger.debug(f'date list: {date_list}')
     # スレッド数に応じて、date_listを分割する
-    date_list_threads = split_date_list(date_list, threads_num)
-    #print(date_list)
+    date_list_threads = split_date_list(date_list, threads_num, logger=logger)
+    logger.debug(f'splited date list: {date_list_threads}')
+    #return logger
 
     # マルチスレッド化する
     ##  ここから
@@ -361,32 +364,32 @@ def main():
     #selenium_go_to_search_menu(driver, mouse, cfg, cookies)
     # 条件を指定して、空き予約を取得する
     #reserves_list = selenium_post_conditions(driver, date_list, reserves_list, cfg)
-    #print(type(reserves_list))
-    #print(dir(reserves_list))
+    #logger.debug(type(reserves_list))
+    #logger.debug(dir(reserves_list))
     # seleniumを終了する
     #driver.quit()
     ## ここまで
     # マルチスレッドで呼び出す
-    threadsafe_list = multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=threads_num)
+    threadsafe_list = multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=threads_num, logger=logger)
 
-    #print(reserves_list)
-    print(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
+    logger.info(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
     #exit()
     # LINEにメッセージを送信する
     ## メッセージ本体を作成する
-    reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg)
+    reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg)
+    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
     #exit()
+    return logger
     
 if __name__ == '__main__':
     # 実行時間を測定する
     start = time.time()
-    main()
+    logger = main()
     # デバッグ用(HTTPリクエスト回数を表示する)
-    print(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
+    logger.debug(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
     # 実行時間を表示する
     elapsed_time = time.time() - start
-    print(f'whole() duration time: {elapsed_time} sec')
+    logger.debug(f'whole() duration time: {elapsed_time} sec')
     exit()
 
