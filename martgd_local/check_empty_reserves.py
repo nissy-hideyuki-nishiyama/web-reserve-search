@@ -16,6 +16,7 @@ import sys
 import math
 import datetime
 import calendar
+import time
 
 ## JSONファイルの取り扱い
 import json
@@ -25,6 +26,9 @@ import unicodedata
 
 ## ツールライブラリを読み込む
 import reserve_tools
+
+# HTTPリクエスト数
+http_req_num = 0
 
 def convert_WAVEDASH_to_FULLWIDTHTILDE(string, reverse=False):
     """
@@ -38,7 +42,7 @@ def convert_WAVEDASH_to_FULLWIDTHTILDE(string, reverse=False):
         return string.replace(fullwidthtilde, wavedash)
 
 
-def create_inputdate(target_months_lists):
+def create_inputdate(target_months_lists, logger=None):
     """
     検索対象年月日の開始日と終了日を作成する
     """
@@ -55,12 +59,12 @@ def create_inputdate(target_months_lists):
     end_day = _last_day
     # 入力データの開始と終了の年月日のデータを作成する
     input_data_date = [ start_year, start_month, start_day, end_year, end_month, end_day ]
-    #print(f'input_data_date: {input_data_date}')
+    logger.debug(f'input_data_date: {input_data_date}')
     return input_data_date
     
 
 #def create_inputdata(want_court_list, reserve_status, input_data_date):
-def create_inputdata(cfg, input_data_date):
+def create_inputdata(cfg, input_data_date, logger=None):
     """
     検索条件の入力データを作成する
     入力データの開始と終了の年月日のデータにコート番号と予約受付状態の値を追加する
@@ -76,27 +80,26 @@ def create_inputdata(cfg, input_data_date):
         #print(f'{key}')
         input_data[key] = input_data_date + [ value, reserve_status ]
         #print(input_data[key])
-    #print(input_data)
+    logger.debug(f'{input_data}')
     return input_data
 
 
 # クローラー
 ## cookieを取得するため、トップページにアクセスする
+@reserve_tools.elapsed_time
 def get_cookie(cfg):
     """
     cookieを取得する
     """
+    global http_req_num
     # セッションを開始する
     session = requests.session()
+    http_req_num += 1
     response = session.get(cfg['first_url'])
     #response.raise_for_status()
     cookie_sessionid = session.cookies.get(cfg['cookie_sessionid'])
     #cookie_starturl = session.cookies.get(cfg['cookie_starturl'])
     cookies = { cfg['cookie_sessionid']: cookie_sessionid }
-    #print(f'{cookie_sessionid}')
-    #type(response)
-    #dir(response)
-    #print(response.content)
     return cookies , response
 
 
@@ -135,21 +138,17 @@ def get_ncforminfo(response):
     soup = BeautifulSoup(response.text, 'html.parser')
     # form_data部分のみ抽出する
     _form = soup.find('form')
-    #print(type(_form))
-    #print(dir(_form))
-    #print(_form)
     _tag_ncforminfo = _form.find_all('input')[-1]
     _ncforminfo = _tag_ncforminfo['value']
-    #print(type(_ncforminfo))
-    #print(dir(_ncforminfo))
-    #print(_ncforminfo)
     return _ncforminfo
 
 # POSTリクエストを実行する
+@reserve_tools.elapsed_time
 def do_post_request(cookies, form_data, pre_url, url):
     """
     cookie、フォームデータ、直前のリクエストURL、対象URLを貰って、POSTリクエストを実行する
     """
+    global http_req_num
     # 直前のリクエストURLからRefererを含んだヘッダーを生成する
     headers = {
         'Origin': 'https://reserve.lan.jp',
@@ -160,14 +159,14 @@ def do_post_request(cookies, form_data, pre_url, url):
     params = urllib.parse.urlencode(form_data)
     # POSTリクエストする
     res = requests.post(url, headers=headers, cookies=cookies, data=params)
+    http_req_num += 1
     # shift_jisのHTMLを正しく理解できるように文字コードを指定する
     #res.encoding = 'cp932'
     # レスポンスオブジェクトを返す
-    #print(res)
     return res
 
 # 空き予約をコート別に検索する
-def do_search_empty_reserve(cfg, cookies, response, input_data, court_empty_reserves_list):
+def do_search_empty_reserve(cfg, cookies, response, input_data, court_empty_reserves_list, logger=None):
     """
     入力データを取得して、コート別に空き予約を検索する
     """
@@ -177,17 +176,15 @@ def do_search_empty_reserve(cfg, cookies, response, input_data, court_empty_rese
     for _court, _in_data in input_data.items():
         # 検索条件のためのフォームデータを作成する
         form_data = create_formdata(_in_data, response)
-        #print(form_data)
         # フォームデータの値を使って、POSTリクエストを発行し、そのコートに対する空き予約を取得する
         _html = do_post_request(cookies, form_data, url, url)
-        #print(_html.text)
         # 取得した空き予約結果のWEBページを解析して、空き予約リストに追加する
-        court_empty_reserves_list[_court] = analize_html(_court, _html)
+        court_empty_reserves_list[_court] = analize_html(_court, _html, logger=logger)
     return court_empty_reserves_list
 
 
 # HTMLファイルを解析する    
-def analize_html(court, html):
+def analize_html(court, html, logger=None):
     """
     取得した空き予約情報から土日祝の空き予約情報をフィルタする
     """
@@ -211,12 +208,12 @@ def analize_html(court, html):
             # 時間帯の文字列なら予約名リストに追加する
             if len(_str) > 0:
                 empty_reserves_list.setdefault(_date, []).append(_str)
-    #print(empty_reserves_list)
+    logger.debug(f'empty_reserves_list: {empty_reserves_list}')
     return empty_reserves_list
 
 
 # コートの空き予約リストと希望日リストを比較して、予約リストを作成する
-def create_selected_reserve_list(court_empty_reserves_list, reserves_list, cfg, input_data_date):
+def create_selected_reserve_list(court_empty_reserves_list, reserves_list, cfg, input_data_date, logger=None):
     """
     希望時間帯および希望日のみ抽出したリストを作成する
     """
@@ -225,32 +222,32 @@ def create_selected_reserve_list(court_empty_reserves_list, reserves_list, cfg, 
     # 希望日のみ抽出した予約名リストを作成する
     # コート別に空き予約名リストを取得する
     for _court, _date_reserves in court_empty_reserves_list.items():
-        #print(f'court_name: {_court}')
+        logger.debug(f'court_name: {_court}')
         # 年月日検索用文字列を土日祝日リストから複製する
         #_selected_reserve_name_list = {}
         _date_string_list = input_data_date
         # 年月日別に空き予約名リストを取得する
         for _day, _reserves in _date_reserves.items():
-            #print(f'found day: {_day}')
+            logger.debug(f'found day: {_day}')
             # 希望時間帯検索用文字列を希望時間帯リストから複製する
             _want_time_list = want_time_list
             # 希望日リストの日にちと一致したら
             for _want_day in _date_string_list:
                 if _day == _want_day:
-                    #print(f'day: {_day}')
+                    #logger.debug(f'day: {_day}')
                     #_date_string_list.pop(0)
                     # 希望日の予約名リストから希望時間帯のみ抽出する
                     for _want_time in _want_time_list:
                         for _reserve in _reserves:
-                            #print(f'want_time: {_want_time}')
-                            #print(f'reserve_string: {_reserve}')
+                            #logger.debug(f'want_time: {_want_time}')
+                            #logger.debug(f'reserve_string: {_reserve}')
                             # 2020/12/03に突如発生した。マートガーデン側のデータ更新が怪しい
                             # 波ダッシュが文字列に含まれていたら、全角チルドに変換する
                             if b'\xe3\x80\x9c' in _reserve.encode('utf-8'):
                                 _reserve = convert_WAVEDASH_to_FULLWIDTHTILDE(_reserve)
-                                #print(_reserve.encode('utf-8'))
+                                #logger.debug(_reserve.encode('utf-8'))
                             if str(_want_time) == str(_reserve):
-                                #print(f'{_court}:{_day}:{_reserve}')
+                                logger.debug(f'{_court}:{_day}:{_reserve}')
                                 # 希望時間帯と一致した予約を空き予約リストに登録する
                                 # 空き予約リストに発見した日がない場合はその日をキーとして登録する
                                 if f'{_day}' not in reserves_list:
@@ -268,7 +265,7 @@ def create_selected_reserve_list(court_empty_reserves_list, reserves_list, cfg, 
                 # 一致しない場合は平日なので、次の処理のループに移動する
                 else:
                     continue
-    #print(reserves_list)
+    #logger.debug(f'{reserves_list}')
     return reserves_list
 
 
@@ -279,8 +276,6 @@ def main():
     """
     # 祝日の初期化
     public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
-    # 入力データの辞書の初期化
-    input_data = {}
     # 空き予約名リストの初期化
     court_empty_reserves_list = {}
     #selected_reserve_name_list = {}
@@ -295,32 +290,42 @@ def main():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg2.json')
+    cfg = reserve_tools.read_json_cfg('cfg.json')
+    # ロギングを設定する
+    logger = reserve_tools.mylogger(cfg)
     # 検索対象月のリストを作成する
-    target_months_list = reserve_tools.create_month_list(cfg)
+    target_months_list = reserve_tools.create_month_list(cfg, logger=logger)
     # 検索対象の開始日と終了日のリストを作成する
-    input_data_date = create_inputdate(target_months_list)
+    input_data_date = create_inputdate(target_months_list, logger=logger)
     # 検索データを作成する
-    input_data = create_inputdata(cfg, input_data_date)
+    input_data = create_inputdata(cfg, input_data_date, logger=logger)
     # フィルターリストを作成する
     date_string_list = reserve_tools.create_date_list(target_months_list, public_holiday, cfg)
-    #print(date_string_list)
+    logger.debug(f'date_string_list: {date_string_list}')
     # 空き予約ページのトップページにアクセスし、cookieを取得する
     ( cookies, response ) = get_cookie(cfg)
     # 検索データを入力して、空き予約を検索する
-    court_empty_reserves_list = do_search_empty_reserve(cfg, cookies, response, input_data, court_empty_reserves_list)
-    #print(court_empty_reserves_list)
+    court_empty_reserves_list = do_search_empty_reserve(cfg, cookies, response, input_data, court_empty_reserves_list, logger=logger)
+    logger.debug(f'court_empty_reserves_list: {court_empty_reserves_list}')
     # 空き予約名リストから希望曜日の希望時間帯のみを抽出したリストを作成する
-    reserves_list = create_selected_reserve_list(court_empty_reserves_list, reserves_list, cfg, date_string_list)
-    #print(reserves_list)
+    reserves_list = create_selected_reserve_list(court_empty_reserves_list, reserves_list, cfg, date_string_list, logger=logger)
+    logger.debug(f'reserves_list: {reserves_list}')
     #exit()
     # 送信メッセージ本体を作成する
-    message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
+    message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINE Notifyに空き予約情報のメッセージを送信する
-    reserve_tools.send_line_notify(message_bodies, cfg)
+    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
     # 終了する
-    exit()
+    #exit()
+    return logger
  
 if __name__ == '__main__':
-    main()
-    
+    # 実行時間を測定する
+    start = time.time()
+    logger = main()
+    # デバッグ用(HTTPリクエスト回数を表示する)
+    logger.debug(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
+    # 実行時間を表示する
+    elapsed_time = time.time() - start
+    logger.debug(f'whole() duration time: {elapsed_time} sec')
+    exit()
