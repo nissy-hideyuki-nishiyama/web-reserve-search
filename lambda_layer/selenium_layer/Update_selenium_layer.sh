@@ -11,7 +11,7 @@ AWSCMD="aws --region ${Region} --profile ${Profile}"
 LayerName=selenium_layer
 S3Bucket=nissy-jp-distfiles-tky
 S3Path=build_lambda/lambda_layer
-
+Date=$(date +%Y%m%d-%H%M)
 
 # カレントディレクトリのパス取得と変数設定
 Current_Dir=$(pwd)
@@ -26,17 +26,17 @@ rm -rf python ${Zip_Filename}
 # 八王子のrequirements.txtから必要なpipパッケージをダウンロードする
 echo "Get requirements.txt and create library zip."
 mkdir -p ${Work_Dir}/python
-pip install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/hachioji/requirements.txt 
+pip3 install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/hachioji/requirements.txt 
 
 # zipファイルを作成する
 zip -ry ${Zip_Filename} ./python
 
 # zipファイルを所定のディレクトリにアップロードする
 ${AWSCMD} s3 cp ./${Zip_Filename} s3://${S3Bucket}/${S3Path}/
-exit
+#exit
 
 # 所定のLambdaレイヤーに登録する
 ${AWSCMD} lambda publish-layer-version --layer-name ${LayerName} \
-  --description "selenium_and_other_etc_pip_lib" \
+  --description "selenium_and_other_etc_pip_lib at ${Date}" \
   --license-info "BSD" --compatible-runtimes python3.6 python3.7 python3.8 \
   --content S3Bucket=${S3Bucket},S3Key=${S3Path}/${Zip_Filename}
