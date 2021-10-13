@@ -10,7 +10,7 @@ idna==3.2
 multidict==5.1.0
 python-dateutil==2.8.2
 requests==2.26.0
-selenium==3.141.0
+selenium==4.0.0
 six==1.16.0
 soupsieve==2.2.1
 typing-extensions==3.10.0.2
