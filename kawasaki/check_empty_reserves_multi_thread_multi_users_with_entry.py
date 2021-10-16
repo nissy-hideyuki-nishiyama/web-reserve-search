@@ -581,7 +581,7 @@ def get_login_formdata(response):
 
 ## ログインページで、ユーザーＩＤ、パスワードを入力して、マイページを表示する
 @reserve_tools.elapsed_time
-def input_userdata_in_login(cfg, userid, password, cookies, headers, form_data):
+def input_userdata_in_login(cfg, userid, password, securityid, cookies, headers, form_data):
     """
     ログインページでユーザーIDとパスワード、セキュリティ番号を入力し、マイページに移動する
     """
@@ -599,7 +599,7 @@ def input_userdata_in_login(cfg, userid, password, cookies, headers, form_data):
     # _form_data['layoutChildBody:childForm:securityno'] = cfg['securityid']
     _form_data['layoutChildBody:childForm:userid'] = userid
     _form_data['layoutChildBody:childForm:passwd'] = password
-    _form_data['layoutChildBody:childForm:securityno'] = cfg['securityid']
+    _form_data['layoutChildBody:childForm:securityno'] = securityid
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
     # フォームデータを使って、マイページを表示する
@@ -697,7 +697,7 @@ def get_reserved_num(reserved_list, logger=None):
 
 ## 利用日時から探すをクリックして、検索画面に移動する
 @reserve_tools.elapsed_time
-def go_to_search_date_menu_with_userid(cfg, cookies, headers):
+def go_to_search_date_menu_with_userid(cfg, userid, cookies, headers):
     """
     施設の空き状況検索の利用日時からのリンクをクリックして、検索画面に移動する
     """
@@ -707,8 +707,9 @@ def go_to_search_date_menu_with_userid(cfg, cookies, headers):
         'Referer': headers['Referer'],
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
     }
-    # クッキーにユーザーIDを追加する    
-    cookies[cfg['cookie_name_04']] = str(cfg['userid'])
+    # クッキーにユーザーIDを追加する
+    #cookies[cfg['cookie_name_04']] = str(cfg['userid'])
+    cookies[cfg['cookie_name_04']] = userid
     response = requests.get(cfg['search_url'], headers=headers, cookies=cookies)
     http_req_num += 1
     #print(res.text)
@@ -1223,7 +1224,7 @@ def get_confirmed_reserve_number(response, logger=None):
 
 ## ログイン前の事前準備する
 @reserve_tools.elapsed_time
-def prepare_reserve(cfg, userid, password, logger=None):
+def prepare_reserve(cfg, userid, password, securityid, logger=None):
     """
     空きコートを予約するためにログインなどの事前準備を行う
     1. トップページにアクセスし、クッキーを取得する
@@ -1241,7 +1242,7 @@ def prepare_reserve(cfg, userid, password, logger=None):
     # ログインページのフォームデータを取得する
     form_data = get_login_formdata(response)
     # ログインページで、ユーザーＩＤ、パスワードを入力して、マイページを表示する
-    ( cookies, headers, response ) = input_userdata_in_login(cfg, userid, password, cookies, headers, form_data)
+    ( cookies, headers, response ) = input_userdata_in_login(cfg, userid, password, securityid, cookies, headers, form_data)
     return cookies, headers, response
 
 ## 空き予約リスト、希望日リスト、希望時間帯リスト、希望施設名リストより、予約対象リストを作成する
@@ -1373,10 +1374,12 @@ def main():
             continue 
         # 利用者ID毎に予約処理を開始する
         ## IDとパスワードを取得する
-        for _userid, _password in _type_list.items():
-            logger.info(f'UserID:{_userid}, PASS:{_password} is logined.')
+        for _userid, _credential in _type_list.items():
+            _password = _credential['password']
+            _securityid = _credential['securityid']
+            logger.info(f'UserID:{_userid}, PASS:{_password}, SecurityID:{_securityid} is logined.')
             # ログインIDを使ってログインし、事前準備をする
-            ( cookies, headers, response ) = prepare_reserve(cfg, _userid, _password, logger=logger)
+            ( cookies, headers, response ) = prepare_reserve(cfg, _userid, _password, _securityid, logger=logger)
             # マイページから既存予約情報を取得する
             reserved_list = get_reserved_info(cfg, response, logger=logger)
             #exit()
@@ -1391,7 +1394,7 @@ def main():
                 continue
             #exit()
             # 利用日時から探すをクリックして、検索画面に移動する
-            response = go_to_search_date_menu_with_userid(cfg, cookies, headers)
+            response = go_to_search_date_menu_with_userid(cfg, _userid, cookies, headers)
             ## フォームデータを取得する
             form_data = get_formdata_rsvDateSearch(response)
             # 希望日+希望時間帯のリストを元に空き予約を探し、予約処理を行う
