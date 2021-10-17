@@ -1,0 +1,11 @@
+{
+    "comment": "webscribe-kawasaki-without-reserve-process-2021101702",
+    "lambdaARN": "arn:aws:lambda:ap-northeast-1:500421251886:function:webscribe-kawasaki",
+    "num": 10,
+    "payload": {},
+    "parallelInvocation": false,
+    "powerValues": [128, 192, 256],
+    "strategy": "balanced",
+    "autoOptimize": false,
+    "autoOptimize": "prod"
+}
