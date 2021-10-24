@@ -1321,7 +1321,7 @@ def lambda_handler(event, context):
     reserve_tools.set_public_holiday('/tmp/public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
     #cfg = reserve_tools.read_json_cfg('cfg.json')
-    cfg = reserve_tools.read_json_cfg('/tmp/cfg.json')
+    cfg = reserve_tools.read_json_cfg('/tmp/cfg3.json')
     #print(f'cfg: {cfg}')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
