@@ -17,11 +17,11 @@ from requests.exceptions import (
 )
 import requests
 import urllib
-from selenium import webdriver
+#from selenium import webdriver
 #from selenium.webdriver.support.ui import Select
-from selenium.webdriver.support.ui import WebDriverWait
+#from selenium.webdriver.support.ui import WebDriverWait
 #from selenium.common import exceptions
-from selenium.webdriver.support import expected_conditions as EC
+#from selenium.webdriver.support import expected_conditions as EC
 #from selenium.webdriver.common.by import By
 #from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
@@ -455,14 +455,16 @@ def prepare_proc_for_reserve(cfg, headers, id, password, logger=None):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
     }
-    # トップページに接続する
-    #( cookies ) = get_cookie_request(cfg, headers)
-    # ログインIDとパスワードを入力し、ログインし、ログイン後のcookieを取得する
-    #( cookies ) = do_login_and_get_cookie(cfg, headers, cookies)
-    # seleniumを初期化
-    ( driver, mouse ) = setup_driver(headers)
-    # トップページに接続し、ログイン画面で利用者IDとパスワードを入力する
-    ( cookies , reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = selenium_get_cookie(driver, cfg, id, password, logger=logger)
+    # requestsバージョン
+    ## トップページに接続する
+    ( cookies , form_data, session ) = get_cookie_request(cfg, headers, logger=logger)
+    ## 予約の確認ページにアクセスし、ログインIDとパスワードを入力し、現在の予約情報を取得する
+    ( cookies , session, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = do_login_and_check_current_reserves(cfg, headers, cookies, form_data, session, id, password, logger=logger)
+    # seleniumバージョン
+    ## seleniumを初期化
+    #( driver, mouse ) = setup_driver(headers)
+    ## トップページに接続し、ログイン画面で利用者IDとパスワードを入力する
+    #( cookies , reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = selenium_get_cookie(driver, cfg, id, password, logger=logger)
     # cookie、既存予約リスト、予約済み数を返す
     return cookies, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date
 
@@ -552,6 +554,106 @@ def selenium_get_cookie(driver, cfg, id, password, logger=None):
     driver.quit()
     return _cookies, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date
 
+# トップページに接続する
+def get_cookie_request(cfg, headers, logger=None):
+    """
+    トップページに接続し、初期cookieを取得する
+    """
+    global http_req_num
+    # セッションを開始する
+    session = requests.session()
+    response = session.get(cfg['first_url'], headers=headers)
+    http_req_num += 1
+    #logger.debug(f'cookies: {session.cookies}')
+    # cookie情報を初期化し、次回以降のリクエストでrequestsモジュールの渡せる形に整形する
+    cookies = {}
+    cookies[cfg['cookie_sessionid']] = session.cookies.get(cfg['cookie_sessionid'])
+    cookies[cfg['cookie_starturl']] = session.cookies.get(cfg['cookie_starturl'])
+    # フォームデータを取得する
+    form_data = get_common_formdata(response)
+    #logger.debug(f'form_data from top pages:')
+    #logger.debug(json.dumps(form_data, indent=2))
+    #exit()
+    return cookies, form_data, session
+
+# ログインIDとパスワードを入力し、ログインし、ログイン後のcookieを取得する
+def do_login_and_check_current_reserves(cfg, headers, cookies, form_data, session, userid, password, logger=None):
+    """
+    ログインし、ログイン後のcookieを取得する
+    このcookieを以後、利用していく
+    """
+    global http_req_num
+    # ヘッダー情報を作成する
+    headers['Referer'] =  cfg['second_url']
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    #logger.debug(f'headers: {headers}')
+    #logger.debug(f'session.cookies: {session.cookies}')
+    # フォームデータを加工する
+    ## 次のリクエストに不要なフォームデータは削除する
+    del form_data['ykr00001c$YoyakuImgButton']
+    del form_data['ykr00001c$CheckImgButton']
+    del form_data['ykr00001c$UserInfoImgButton']
+    del form_data['ykr00001c$ChangePasswordImgButton']
+    ## 必要なフォームデータを変更・追加する
+    form_data['EJS'] = 1
+    form_data['ykr00001c$CheckImgButton.x'] = 164
+    form_data['ykr00001c$CheckImgButton.y'] = 59
+    #logger.debug(f'posted form_data to access login of reserves check:')
+    #logger.debug(json.dumps(form_data, indent=2, ensure_ascii=False))
+    # ログインボタンをクリックする
+    #response = requests.get(cfg['login_url'], headers=headers, cookies=cookies)
+    # 予約の確認リンクをクリックする
+    response = session.post(cfg['reserve_check_url'], headers=headers, cookies=cookies, data=form_data)
+    http_req_num += 1
+    # レスポンスURLを取得する
+    #logger.debug(f'response url: {response.url}')
+    hash_url = response.url
+    # デバッグ用としてhtmlファイルとして保存する
+    #_file_name = f'login.html'
+    #print(_file_name)
+    #_file = reserve_tools.save_html_to_filename(response, _file_name)
+    # ログイン画面のフォームデータを取得する
+    _form_data = get_common_formdata(response)
+    # フォームデータを加工する
+    ## 不要なフォームデータを削除する
+    del _form_data['LoginInputUC$LoginImgButton']
+    del _form_data['LoginInputUC$ReturnImgButton']
+    del _form_data['id_nflag']
+    ## ユーザーＩＤとパスワードをセットする
+    _form_data['LoginInputUC$UserIdTextBox'] = userid
+    _form_data['LoginInputUC$PasswordTextBox'] = password
+    ## LoginInputUC$LoginImgButton.x, LoginInputUC$LoginImgButton.y に値を設定する
+    _form_data['LoginInputUC$LoginImgButton.x'] = '30'
+    _form_data['LoginInputUC$LoginImgButton.y'] = '26'
+    ## id_nflag を 1 にする
+    _form_data['id_nflag'] = '1'
+    # デバッグ用。ログインページに入力するフォームデータを表示する
+    #logger.debug(f'posted form_data to login submit:')
+    #logger.debug(json.dumps(_form_data, indent=2, ensure_ascii=False))
+    # ログインする
+    ## ヘッダー情報を設定する
+    headers['Referer'] = hash_url
+    response = session.post(hash_url, headers=headers, cookies=cookies, data=_form_data)
+    cookies[f'{cfg["cookie_auth"]}'] = session.cookies.get(cfg['cookie_auth'])
+    # デバッグ用
+    #logger.debug(f'login response:')
+    #logger.debug(f'response: {response}')
+    #logger.debug(f'response.status_code: {response.status_code}')
+    #logger.debug(f'response.headers: {response.headers}')
+    #logger.debug(f'session.cookies: {session.cookies}')
+    # デバッグ用としてhtmlファイルとして保存する
+    #_file_name = f'done_login.html'
+    #print(_file_name)
+    #_file = reserve_tools.save_html_to_filename(response, _file_name)
+    ## 認証後のcookieを取得する
+    logger.debug(f'get cookies after login:')
+    logger.debug(f'cookies: {response.cookies}')
+    logger.debug(f'cookies dict after login:')
+    logger.debug(json.dumps(cookies, indent=2, ensure_ascii=False))
+    # 既存予約を取得する
+    ( reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = get_current_reserved_list(response, logger=logger)
+    return cookies, session, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date
+
 # フォームデータを解析する
 def get_common_formdata(response):
     """
@@ -590,7 +692,10 @@ def get_current_reserved_list(response, logger=None):
     _this_month = str(_now.month).zfill(2)
     __this_yyyymm = str(_this_year + _this_month)
     # html解析
-    soup = BeautifulSoup(response, 'html.parser')
+    ## seleniumバージョン 
+    # soup = BeautifulSoup(response, 'html.parser')
+    ## requestsバージョン
+    soup = BeautifulSoup(response.text, 'html.parser')
     # 予約情報部分のみ抽出する
     _form = soup.find_all('form')[0]
     _table = _form.find('table', id='ykr11001c_YoyakuListGridView')
