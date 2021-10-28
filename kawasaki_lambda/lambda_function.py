@@ -983,7 +983,8 @@ def add_reserve_to_cart(cfg, cookies, headers, form_data, court_list, tzone_inde
             #print(f'delete formdata: {index_string_doAddCart}')
             del form_data[f'{index_string_doAddCart}']
     ## 「予約カートの内容を確認」を削除する
-    del form_data['layoutChildBody:childForm:jumpRsvCartList']
+    if 'layoutChildBody:childForm:jumpRsvCartList' in form_data:
+        del form_data['layoutChildBody:childForm:jumpRsvCartList']
     #print(json.dumps(form_data, indent=2, ensure_ascii=False))
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
@@ -1018,7 +1019,8 @@ def search_next_empty_reserves_from_emptystate(cfg, cookies, headers, form_data)
         #print(f'delete formdata: {index_string_doAddCart}')
         del form_data[f'{index_string_doAddCart}']
     # 「予約カートの内容を確認」を削除する
-    del form_data['layoutChildBody:childForm:jumpRsvCartList']
+    if 'layoutChildBody:childForm:jumpRsvCartList' in form_data:
+        del form_data['layoutChildBody:childForm:jumpRsvCartList']
     #print(form_data)
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
@@ -1104,7 +1106,8 @@ def doing_reserve(cfg, cookies, headers, form_data):
     global http_req_num
     # 不要なフォームデータを削除する
     ## 取り消しボタンの値を削除する
-    del form_data['layoutChildBody:childForm:inputDetailsItems:0:doCancel']
+    if 'layoutChildBody:childForm:inputDetailsItems:0:doCancel' in form_data:
+        del form_data['layoutChildBody:childForm:inputDetailsItems:0:doCancel']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
     # フォームデータを使って、カートに予約を追加する
@@ -1139,7 +1142,8 @@ def input_reserve(cfg, cookies, headers, form_data):
     form_data['layoutChildBody:childForm:inputDetailsItems:0:useCnt'] = '4'
     # 不要なフォームデータを削除する
     ## 取り消しボタンの値を削除する
-    del form_data['layoutChildBody:childForm:inputDetailsItems:0:doCancel']
+    if 'layoutChildBody:childForm:inputDetailsItems:0:doCancel' in form_data:
+        del form_data['layoutChildBody:childForm:inputDetailsItems:0:doCancel']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
     # フォームデータを使って、カートに予約を追加する
@@ -1170,9 +1174,11 @@ def confirm_reserve(cfg, cookies, headers, form_data):
     global http_req_num
     # 不要なフォームデータを削除する
     ## お気に入りボタンの値を削除する
-    del form_data['layoutChildBody:childForm:inputDetailsItems:0:doAddFavorite']
+    if 'layoutChildBody:childForm:inputDetailsItems:0:doAddFavorite' in form_data:
+        del form_data['layoutChildBody:childForm:inputDetailsItems:0:doAddFavorite']
     ## 修正するボタンの値を削除する
-    del form_data['layoutChildBody:childForm:doDetails']
+    if 'layoutChildBody:childForm:doDetails' in form_data:
+        del form_data['layoutChildBody:childForm:doDetails']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
     # フォームデータを使って、カートに予約を追加する
