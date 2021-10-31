@@ -15,6 +15,8 @@ import urllib
 
 # WEBAPI関連
 import requests
+from urllib3.util import Retry, timeout
+from requests.adapters import HTTPAdapter
 
 # JSONファイルの取り扱い
 import json
@@ -99,7 +101,7 @@ def create_datetime_list(target_months_list, public_holiday, cfg, logger=None):
 # 並列処理をするための関数
 ## 空き予約を検索するために事前処理として、同時実行数分のcookieとフォームデータを取得する
 #@reserve_tools.elapsed_time
-def multi_thread_prepareproc(cfg, reqdata, threads=1):
+def multi_thread_prepareproc(cfg, reqdata, threads=1, logger=None):
     """
     threads数分だけ実施する
     1)cookieを取得する
@@ -107,7 +109,7 @@ def multi_thread_prepareproc(cfg, reqdata, threads=1):
     """
     #print(f'スレッド数: {threads}')
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        futures = [executor.submit(get_cookie_and_formdata, cfg, index) for index in range(threads)]
+        futures = [executor.submit(get_cookie_and_formdata, cfg, index, logger=logger) for index in range(threads)]
         for future in as_completed(futures):
             #print(future.result())
             reqdata.append(future.result())
@@ -139,34 +141,50 @@ def multi_thread_datesearch(cfg, datetime_list, threadsafe_list, reqdata, thread
 # クローラー
 ## cookieとフォームデータを事前に取得する
 #@reserve_tools.elapsed_time
-def get_cookie_and_formdata(cfg, index):
+def get_cookie_and_formdata(cfg, index, logger=None):
     """
     cookieとformdataを取得する
     """
-    #print(f'インデックス: # {index}')
+    #logger.debug(f'インデックス: # {index}')
     # ヘッダーを設定する
     headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
             }
     # cookieを取得する
-    (cookies, response) = get_cookie_request(cfg)
+    (cookies, response) = get_cookie_request(cfg, logger=logger)
     # フォームデータを取得する
-    response = go_to_search_date_menu(cfg, headers, cookies)
+    response = go_to_search_date_menu(cfg, headers, cookies, logger=logger)
     #reqdata.append(get_formdata(response))
     _reqdata = get_formdata(response)
     return cookies, _reqdata
 
 ## cookieを取得するため、トップページにアクセスする
-#@reserve_tools.elapsed_time
-def get_cookie_request(cfg):
+@reserve_tools.elapsed_time
+def get_cookie_request(cfg, logger=None):
     """
     cookieを取得する
     """
-    # セッションを開始する
-    session = requests.session()
-    response = session.get(cfg['first_url'])
     global http_req_num
-    http_req_num += 1
+    # セッションを開始する
+    session = requests.Session()
+    # 再試行3回、sleep時間1秒、timeout以外でリトライのステータスコード
+    retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retries))
+    try:
+        response = session.get(cfg['first_url'], timeout=(3.0, 10.0))
+    except requests.exceptions.Timeout as e:
+        logger.exception(f'timeout for get cookie: {e}')
+        http_req_num += retries
+    except requests.exceptions.ConnectionError as e:
+        logger.exception(f'connection error for get cookie: {e}')
+        http_req_num += retries
+    else:
+        http_req_num += 1
+    # セッションを開始する
+    #session = requests.session()
+    #response = session.get(cfg['first_url'])
+    #global http_req_num
+    #http_req_num += 1
     # cookie情報を初期化し、次回以降のリクエストでrequestsモジュールの渡せる形に整形する
     cookies = {}
     cookies[cfg['cookie_name_01']] = session.cookies.get(cfg['cookie_name_01'])
@@ -176,12 +194,12 @@ def get_cookie_request(cfg):
 
 ## 施設の空き状況検索の利用日時からのリンクをクリックして、検索画面に移動する
 #@reserve_tools.elapsed_time
-def go_to_search_date_menu(cfg, headers, cookies):
+def go_to_search_date_menu(cfg, headers, cookies, logger=None):
     """
     施設の空き状況検索の利用日時からのリンクをクリックして、検索画面に移動する
     """
-    res = requests.get(cfg['search_url'], headers=headers, cookies=cookies)
     global http_req_num
+    res = requests.get(cfg['search_url'], headers=headers, cookies=cookies)
     http_req_num += 1
     #print(res.text)
     return res
@@ -470,27 +488,8 @@ class ThreadSafeReservesList:
 
 # 予約取得用クローラー
 ## cookieを取得するため、トップページにアクセスする
-@reserve_tools.elapsed_time
-def get_cookie_request(cfg):
-    """
-    cookieを取得する
-    """
-    global http_req_num
-    # セッションを開始する
-    session = requests.session()
-    response = session.get(cfg['first_url'])
-    #exit()
-    http_req_num += 1
-    # cookie情報を初期化し、次回以降のリクエストでrequestsモジュールの渡せる形に整形する
-    cookies = {}
-    cookies[cfg['cookie_name_01']] = response.cookies.get(cfg['cookie_name_01'])
-    cookies[cfg['cookie_name_02']] = response.cookies.get(cfg['cookie_name_02'])
-    #cookies[cfg['cookie_name_03']] = response.cookies.get(cfg['cookie_name_03'])
-    #cookies[cfg['cookie_name_04']] = cfg['userid']
-    #print(json.dumps(cookies, indent=2))
-    #print(response.text)
-    #exit()
-    return cookies , response
+#@reserve_tools.elapsed_time
+#def get_cookie_request(cfg, logger=None):
 
 ## トップページのフォームデータを取得する
 def get_homeindex_formdata(response):
@@ -1240,7 +1239,7 @@ def prepare_reserve(cfg, userid, password, securityid, logger=None):
     5. ログインページで、ユーザーＩＤ、パスワードを入力して、マイページを表示する
     """
     # トップページにアクセスし、クッキーを取得する
-    ( cookies, response ) = get_cookie_request(cfg)
+    ( cookies, response ) = get_cookie_request(cfg, logger=logger)
     # トップページのフォームデータを取得する
     form_data = get_homeindex_formdata(response)
     # ログインページにアクセスする
@@ -1327,7 +1326,7 @@ def lambda_handler(event, context):
     reserve_tools.set_public_holiday('/tmp/public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
     #cfg = reserve_tools.read_json_cfg('cfg.json')
-    cfg = reserve_tools.read_json_cfg('/tmp/cfg3.json')
+    cfg = reserve_tools.read_json_cfg('/tmp/cfg.json')
     #print(f'cfg: {cfg}')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
@@ -1338,7 +1337,7 @@ def lambda_handler(event, context):
     # 検索年月日時間を取得する
     datetime_list = create_datetime_list(target_months_list, public_holiday, cfg, logger=logger)
     # threadsに応じたcookieとフォームデータを取得する
-    reqdata = multi_thread_prepareproc(cfg, reqdata, threads=threads_num)
+    reqdata = multi_thread_prepareproc(cfg, reqdata, threads=threads_num, logger=logger)
     # threadsに応じたスレッド数で利用日時検索ページで空き予約を検索する
     threadsafe_list = multi_thread_datesearch(cfg, datetime_list, threadsafe_list, reqdata, threads=threads_num, logger=logger)
     # 1回目で取得できなかった空き予約検索を再実行する。再実行は1回のみに実施する
