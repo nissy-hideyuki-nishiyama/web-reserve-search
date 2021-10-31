@@ -622,7 +622,9 @@ def get_current_reserved_list(response, logger=None):
         # 年月日時間部分を取得
         _datetime = _tag.contents[0]
         # コート名を取得
-        _court = _tag.contents[2]
+        ## 緊急事態宣言中
+        #_court = _tag.contents[2]
+        _court = _tag.contents[1]
         # 不要な文字列を削除
         _datetime = _datetime.replace('\n', '').replace('\t', '').replace('\xa0', '').replace('令', '')
         # 年月日を取得
@@ -641,7 +643,9 @@ def get_current_reserved_list(response, logger=None):
         __date = _year + _month + _day
         __yyyymm = _year + _month
         # コート名のみ抽出する
-        _court = _court.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）','').replace('奈良原公園庭球場','')
+        ## 緊急事態宣言中
+        #_court = _court.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）','').replace('奈良原公園庭球場','')
+        _court = _court.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）　','').replace('奈良原公園庭球場　','').replace('　', '').replace('<br>', '').replace('</br>', '')
         #print(f'{__date} {_time}')
         #print(_court)
         if __date not in reserved_list:
