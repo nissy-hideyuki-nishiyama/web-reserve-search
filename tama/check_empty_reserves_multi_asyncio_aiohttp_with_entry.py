@@ -377,7 +377,8 @@ async def get_request_time(cfg, cookies, court_link_list, coro, limit=1):
 
 # 事前準備
 @reserve_tools.elapsed_time
-def prepare():
+#def prepare():
+def prepare(cfg_filename="cfg.json"):
     """
     変数の初期化などの事前準備
     """
@@ -386,7 +387,8 @@ def prepare():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg.json')
+    #cfg = reserve_tools.read_json_cfg('cfg.json')
+    cfg = reserve_tools.read_json_cfg(cfg_filename)
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
     # 検索リストを作成する
@@ -708,7 +710,7 @@ def get_current_reserved_list(response, logger=None):
     reserved_line_no = 0
     # 予約情報を取得する
     for _tag in _td:
-        #print(_tag.contents)
+        #logger.debug(_tag.contents)
         # 予約レコードが落選の場合、次のタグの処理に移る
         if _td_comment_D[reserved_line_no].contents[0] == '落選':
             logger.debug(f'defeated reserve: {_tag}')
@@ -721,7 +723,7 @@ def get_current_reserved_list(response, logger=None):
         #_court = _tag.contents[2]
         _court = _tag.contents[1]
         # 不要な文字列を削除
-        _datetime = _datetime.replace('\n', '').replace('\t', '').replace('\xa0', '').replace('令', '')
+        _datetime = f'{_datetime}'.replace('\n', '').replace('\r', '').replace('\t', '').replace('\xa0', '').replace('令', '')
         # 年月日を取得
         _date = _datetime.split('\u3000')[0]
         # 時間を取得
@@ -739,8 +741,8 @@ def get_current_reserved_list(response, logger=None):
         __yyyymm = _year + _month
         # コート名のみ抽出する
         ## 緊急事態宣言中
-        #_court = _court.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）','').replace('奈良原公園庭球場','')
-        _court = _court.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）　','').replace('奈良原公園庭球場　','').replace('　', '').replace('<br>', '').replace('</br>', '')
+        #_court = f'{_court}'.replace('\n', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）','').replace('奈良原公園庭球場','')
+        _court = f'{_court}'.replace('\n', '').replace('\r', '').replace('\t', '').replace('\u3000※午後８時閉場\u3000緊急事態宣言期間中\u3000', '').replace('庭球場（奈良原以外）　','').replace('奈良原公園庭球場　','').replace('　', '').replace('<br>', '').replace('</br>', '')
         #print(f'{__date} {_time}')
         #print(_court)
         if __date not in reserved_list:
@@ -1216,7 +1218,7 @@ if __name__ == '__main__':
     async_lock_reserves = AsyncioLockReservesList()
     reserves_list = async_lock_reserves.reserves_list
     # 事前準備
-    ( cfg, logger, date_list, want_date_list ) = prepare()
+    ( cfg, logger, date_list, want_date_list ) = prepare(cfg_filename="cfg.json")
     logger.info(f'starting to search empty reserve.')
     # 同時実行数
     threads = cfg['threads_num']
