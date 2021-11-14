@@ -17,13 +17,6 @@ from requests.exceptions import (
 )
 import requests
 import urllib
-#from selenium import webdriver
-#from selenium.webdriver.support.ui import Select
-#from selenium.webdriver.support.ui import WebDriverWait
-#from selenium.common import exceptions
-#from selenium.webdriver.support import expected_conditions as EC
-#from selenium.webdriver.common.by import By
-#from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 
 ## カレンダー関連
@@ -377,18 +370,19 @@ async def get_request_time(cfg, cookies, court_link_list, coro, limit=1):
 
 # 事前準備
 @reserve_tools.elapsed_time
-#def prepare():
-def prepare(cfg_filename="cfg.json"):
+def prepare():
     """
     変数の初期化などの事前準備
     """
     # 祝日の初期化
     public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
+    # /tmpファイルに設定ファイルがあるか確認し、なければS3からファイルをダウンロードする
+    reserve_tools.is_exist_files('nissy-jp-input', 'webscribe/tennis_reserve_search/tama/cfg.json', 'webscribe/tennis_reserve_search/tama/court_map.json', 'webscribe/tennis_reserve_search/common/public_holiday.json')
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    reserve_tools.set_public_holiday('/tmp/public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
     #cfg = reserve_tools.read_json_cfg('cfg.json')
-    cfg = reserve_tools.read_json_cfg(cfg_filename)
+    cfg = reserve_tools.read_json_cfg('/tmp/cfg.json')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
     # 検索リストを作成する
@@ -462,99 +456,8 @@ def prepare_proc_for_reserve(cfg, headers, id, password, logger=None):
     ( cookies , form_data, session ) = get_cookie_request(cfg, headers, logger=logger)
     ## 予約の確認ページにアクセスし、ログインIDとパスワードを入力し、現在の予約情報を取得する
     ( cookies , session, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = do_login_and_check_current_reserves(cfg, headers, cookies, form_data, session, id, password, logger=logger)
-    # seleniumバージョン
-    ## seleniumを初期化
-    #( driver, mouse ) = setup_driver(headers)
-    ## トップページに接続し、ログイン画面で利用者IDとパスワードを入力する
-    #( cookies , reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = selenium_get_cookie(driver, cfg, id, password, logger=logger)
     # cookie、既存予約リスト、予約済み数を返す
     return cookies, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date
-
-# Selenium初期化
-@reserve_tools.elapsed_time
-def setup_driver(headers):
-    """
-    seleniumを初期化する
-    デバッグ時にはChromeの動作を目視確認するために、options.add_argi,emt行をコメントアウトする。
-    ヘッドレスモードを利用する場合は、options.add_argument行のコメントアウトを外す。
-    """
-    # Chromeを指定する
-    options = webdriver.ChromeOptions()
-    #options.binary_location = '/usr/bin/chromium-browser'
-    options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument(f'--user-agent={headers["User-Agent"]}')
-    #driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', options=options)
-    driver = webdriver.Chrome('/usr/lib64/chromium-browser/chromedriver', options=options)
-    #driver.set_window_size('800', '600')
-    mouse = webdriver.ActionChains(driver)
-    return driver , mouse
-
-# 利用者IDとパスワードでログインし、認証後のcookieを取得する 
-@reserve_tools.elapsed_time
-def selenium_get_cookie(driver, cfg, id, password, logger=None):
-    """
-    selenuimuで接続する
-    cookieを取得する
-    トップページにアクセスし、ログインをクリックする
-    ログインボタンでjavascriptを実行するため、ログインまではseleniumを利用する
-    """
-    global http_req_num
-    # トップページにアクセスする
-    response = driver.get(cfg['first_url'])
-    http_req_num += 1
-    sleep(1)
-    cookies = driver.get_cookies()
-    # 画面のtitleを確認する
-    assert '多摩市 施設予約トップページ' in driver.title
-    # 予約の確認をクリックして、認証画面を表示させる
-    driver.find_element_by_xpath("//*[@id='ykr00001c_CheckImgButton']").click()
-    # ログインをクリックして、認証画面に進む
-    # response = driver.get(cfg['login_url'])
-    http_req_num += 1
-    assert '多摩市 ログイン' in driver.title
-    # DOM上に表示されるまで待機する
-    wait = WebDriverWait(driver, 10)
-    #  利用者IDとパスワード、ログインボタンが表示されるまで待機する
-    #f_userid = wait.until(EC.presence_of_element_located((By.ID, "LoginInputUC$UserIdTextBox")))
-    #f_password = wait.until(EC.presence_of_element_located((By.ID, "LoginInputUC$PasswordTextBox")))
-    #f_login=wait.until(EC.presence_of_element_located((By.ID, "LoginInputUC$LoginImgButton")))
-    # 利用者IDとパスワードを入力し、ログインボタンをクリックする
-    f_userid = driver.find_element_by_xpath("//*[@id='LoginInputUC_UserIdTextBox']")
-    f_password = driver.find_element_by_xpath("//*[@id='LoginInputUC_PasswordTextBox']")
-    # 利用者IDフィールドに入力する
-    #f_userid.send_keys(str(cfg['userid']))
-    f_userid.send_keys(str(id))
-    # パスワードフィールドに入力する
-    #f_password.send_keys(str(cfg['password']))
-    f_password.send_keys(str(password))
-    # ログインボタンをクリックする
-    driver.find_element_by_xpath("//*[@id='LoginInputUC_LoginImgButton']").click()
-    http_req_num += 1
-    # すべて表示されるまで待機する
-    wait.until(EC.presence_of_all_elements_located)
-    #sleep(1)
-    # トップページに戻っているか確認する
-    # 申込内容一覧ページが表示されているか確認する
-    assert '多摩市 申込内容一覧' in driver.title
-    # 認証後のcookieを取得する
-    cookies = driver.get_cookies()
-    # cookiesをrequestsで扱えるよにdict型に変換する
-    _cookies = {}
-    for _dict in cookies:
-        _cookies[f'{_dict["name"]}'] = f'{_dict["value"]}'
-    # 現在、表示されているページのソースコードを取得する
-    response = driver.page_source
-    # デバッグ用としてhtmlファイルとして保存する
-    #_file_name = f'reserved_list.html'
-    #with open(_file_name, 'w', encoding='utf-8') as file:
-    #    file.write(response)
-    # 既存予約を取得する
-    ( reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = get_current_reserved_list(response, logger=logger)
-    # seleniumを終了する
-    driver.quit()
-    return _cookies, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date
 
 # トップページに接続する
 def get_cookie_request(cfg, headers, logger=None):
@@ -710,7 +613,7 @@ def get_current_reserved_list(response, logger=None):
     reserved_line_no = 0
     # 予約情報を取得する
     for _tag in _td:
-        #logger.debug(_tag.contents)
+        #print(_tag.contents)
         # 予約レコードが落選の場合、次のタグの処理に移る
         if _td_comment_D[reserved_line_no].contents[0] == '落選':
             logger.debug(f'defeated reserve: {_tag}')
@@ -1058,7 +961,6 @@ def get_reserved_num_by_date(reserved_list, date, logger=None):
         logger.debug(f'not found in current reserved list.')
     return _rev_num
 
-
 ## 空き予約処理の全体処理
 def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
     """
@@ -1067,7 +969,7 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
     #logger = logger
     #want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg)
     # コートマップファイルを読み込む
-    court_map = reserve_tools.read_json_cfg('court_map.json')
+    court_map = reserve_tools.read_json_cfg('/tmp/court_map.json')
     # 希望時間帯を取得する
     want_hour_list = cfg['want_hour_list']
     # 希望施設名を取得する
@@ -1196,7 +1098,7 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
     return None
 
 # 事後処理
-def postproc(reserves_list, logger=None):
+def postproc(cfg, reserves_list, logger=None):
     """
     空き予約リストを整形して、LINEにメッセージを送信する
     """
@@ -1208,7 +1110,10 @@ def postproc(reserves_list, logger=None):
     reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
     return None
 
-if __name__ == '__main__':
+### メインルーチン ###
+@reserve_tools.elapsed_time
+def lambda_handler(event, context):
+#if __name__ == '__main__':
     # 実行時間を測定する
     _start = time.time()
 
@@ -1218,7 +1123,7 @@ if __name__ == '__main__':
     async_lock_reserves = AsyncioLockReservesList()
     reserves_list = async_lock_reserves.reserves_list
     # 事前準備
-    ( cfg, logger, date_list, want_date_list ) = prepare(cfg_filename="cfg.json")
+    ( cfg, logger, date_list, want_date_list ) = prepare()
     logger.info(f'starting to search empty reserve.')
     # 同時実行数
     threads = cfg['threads_num']
@@ -1255,8 +1160,9 @@ if __name__ == '__main__':
     # 空き予約リストを昇順にソートする
     sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
     # LINEにメッセージを送信する
-    postproc(reserves_list, logger=logger)
+    postproc(cfg, reserves_list, logger=logger)
     logger.info(f'finished to search empty reserve.')
+    #return None
     # 空き予約リストに値があるかないかを判断し、予約処理を開始する
     #print(f'reserves_list: {threadsafe_list.reserves_list}')
     if len(reserves_list) == 0:
@@ -1272,4 +1178,8 @@ if __name__ == '__main__':
     elapsed_time = time.time() - _start
     logger.info(f'whole() duration time: {elapsed_time} sec')
     
-    exit()
+    # 完了コードを返す
+    return {
+        'status': 200,
+        'body': 'completed.'
+    }

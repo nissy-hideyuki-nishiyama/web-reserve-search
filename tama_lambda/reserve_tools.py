@@ -10,6 +10,8 @@ from dateutil.relativedelta import relativedelta
 ## ファイルIO、ディレクトリ関連　
 import os
 import sys
+import subprocess
+import pathlib
 
 ## JSON関連
 import json
@@ -29,6 +31,13 @@ from logging import (
     DEBUG, INFO, WARNING, ERROR, CRITICAL
 )
 from logging.handlers import RotatingFileHandler
+
+# AWS boto
+import boto3
+import botocore
+
+# S3クライアント
+s3 = boto3.resource('s3')
 
 # 設定ファイルの読み込み
 ## 祝日ファイル
@@ -59,6 +68,25 @@ def read_json_cfg(cfg_file_name):
         #print(cfg)
         return cfg
 
+# ファイルの存在の確認と存在しない場合はディレクトリ+空ファイルを作成する
+def check_exist_file_and_create_file(file_path):
+    """
+    ファイルが存在するか確認し、存在しない場合はディレクトリと空ファイルを作成する
+    """
+    # ファイルパスが存在する確認する。存在しない場合は空ファイルを作成する
+    if not os.path.exists(file_path):
+        print(f'not found {file_path} . create empty files.')
+        # ファイル名とパスを取得する
+        file_name = os.path.basename(file_path)
+        path_name = os.path.dirname(file_path)
+        # ファイルパス中ディレクトリの存在を確認し、存在しなければ中間ディレクトリ含めて作成する
+        if not os.path.exists(path_name):
+            os.makedirs(path_name, exist_ok=True)
+        # 空ファイルを作成する
+        emptyfile = pathlib.Path(file_path)
+        emptyfile.touch()
+    return None
+
 # loggerの設定
 def mylogger(cfg):
     """
@@ -70,12 +98,13 @@ def mylogger(cfg):
     _level_sh = cfg['logger_conf']['level_consolehandler']
     _logsize_maxbytes = cfg['logger_conf']['logsize_maxbytes']
     _backup_count = cfg['logger_conf']['backup_count']
+    # ログファイルの存在を確認し、存在しなければ作成する
+    check_exist_file_and_create_file(_logfile_path)
     #ロガーの生成
     logger = getLogger('mylog')
     #出力レベルの設定
     logger.setLevel(DEBUG)
     #ハンドラの生成
-    #fh = FileHandler(_logfile_path)
     fh = RotatingFileHandler(_logfile_path, mode='a', maxBytes=_logsize_maxbytes, backupCount=_backup_count)
     sh = StreamHandler(sys.stdout)
     # ハンドラーのレベルを設定
@@ -189,7 +218,6 @@ def check_new_year(month):
         year = _this_year
     #print(f'Year: {year}')
     return year
-
 # 検索対象月のリストを作成する
 def create_month_list(cfg, logger=None):
     """

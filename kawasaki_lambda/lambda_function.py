@@ -145,7 +145,7 @@ def get_cookie_and_formdata(cfg, index, logger=None):
     """
     cookieとformdataを取得する
     """
-    #logger.debug(f'cookie index: # {index}')
+    #logger.debug(f'インデックス: # {index}')
     # ヘッダーを設定する
     headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
@@ -159,7 +159,7 @@ def get_cookie_and_formdata(cfg, index, logger=None):
     return cookies, _reqdata
 
 ## cookieを取得するため、トップページにアクセスする
-#@reserve_tools.elapsed_time
+@reserve_tools.elapsed_time
 def get_cookie_request(cfg, logger=None):
     """
     cookieを取得する
@@ -180,6 +180,11 @@ def get_cookie_request(cfg, logger=None):
         http_req_num += retries
     else:
         http_req_num += 1
+    # セッションを開始する
+    #session = requests.session()
+    #response = session.get(cfg['first_url'])
+    #global http_req_num
+    #http_req_num += 1
     # cookie情報を初期化し、次回以降のリクエストでrequestsモジュールの渡せる形に整形する
     cookies = {}
     cookies[cfg['cookie_name_01']] = session.cookies.get(cfg['cookie_name_01'])
@@ -484,7 +489,7 @@ class ThreadSafeReservesList:
 # 予約取得用クローラー
 ## cookieを取得するため、トップページにアクセスする
 #@reserve_tools.elapsed_time
-#def get_cookie_request():
+#def get_cookie_request(cfg, logger=None):
 
 ## トップページのフォームデータを取得する
 def get_homeindex_formdata(response):
@@ -603,7 +608,8 @@ def input_userdata_in_login(cfg, userid, password, securityid, cookies, headers,
     #_file_name = f'mypage.html'
     #_file = reserve_tools.save_html_to_filename(response, _file_name)
     # ログインしたことによりcookieが再発行されるので、cookiesを更新する
-        # 次のPOSTリクエストのためにヘッダーを作成する
+    cookies[cfg['cookie_name_01']] = response.cookies.get(cfg['cookie_name_01'])
+    # 次のPOSTリクエストのためにヘッダーを作成する
     headers['Referer'] = f'{response.url}'
     return cookies, headers, response
 
@@ -1296,7 +1302,7 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
 
 ### メインルーチン ###
 @reserve_tools.elapsed_time
-def main():
+def lambda_handler(event, context):
     """
     メインルーチン
     """
@@ -1313,10 +1319,15 @@ def main():
     # HTTPリクエストデータ
     reqdata = []
     # 処理の開始
+    # /tmpファイルに設定ファイルがあるか確認し、なければS3からファイルをダウンロードする
+    reserve_tools.is_exist_files('nissy-jp-input', 'webscribe/tennis_reserve_search/kawasaki/cfg.json', 'webscribe/tennis_reserve_search/common/public_holiday.json')
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    #reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    reserve_tools.set_public_holiday('/tmp/public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg.json')
+    #cfg = reserve_tools.read_json_cfg('cfg.json')
+    cfg = reserve_tools.read_json_cfg('/tmp/cfg.json')
+    #print(f'cfg: {cfg}')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
     # スレッド数を設定する
@@ -1345,7 +1356,15 @@ def main():
     #print(f'reserves_list: {threadsafe_list.reserves_list}')
     if len(threadsafe_list.reserves_list) == 0:
         logger.info(f'stop do reserve because no empty reserve.')
-        return logger
+        #return logger
+        return {
+            'status': 200,
+            'body': 'stop do reserve because no empty reserve.'
+        }
+    #return {
+    #    'status': 200,
+    #    'body': 'completed to check empty reserves.'
+    #}
     # 予約希望日リストを作成する
     want_date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg, logger=logger)
     # 希望時間帯を取得する
@@ -1362,7 +1381,11 @@ def main():
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
     if bool(target_reserves_list) == False:
         logger.info(f'reserve process stopped. because empty reserves is not wanted.')
-        return logger
+        #return looger
+        return {
+            'status': 200,
+            'body': 'reserve process stopped. because empty reserves is not wanted.'
+        }
     # 複数IDに対応する
     userauth = cfg['userauth']
     ## タイプ毎のID:PASSリストを取得する
@@ -1426,20 +1449,24 @@ def main():
                 continue
     # プログラムの終了
     #exit()
-    return logger
+    #return logger
+    return {
+        'status': 200,
+        'body': 'completed.'
+    }
 
-if __name__ == '__main__':
-    # 実行時間を測定する
-    start = time.time()
-    print(f'HTTP リクエスト数 初期化: {http_req_num}')
-    logger = main()
+# if __name__ == '__main__':
+#     # 実行時間を測定する
+#     start = time.time()
+#     print(f'HTTP リクエスト数 初期化: {http_req_num}')
+#     logger = main()
 
-    # デバッグ用(HTTPリクエスト回数を表示する)
-    logger.info(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
-    # 実行時間を表示する
-    elapsed_time = time.time() - start
-    logger.info(f'whole() duration time: {elapsed_time} sec')
+#     # デバッグ用(HTTPリクエスト回数を表示する)
+#     logger.info(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
+#     # 実行時間を表示する
+#     elapsed_time = time.time() - start
+#     logger.info(f'whole() duration time: {elapsed_time} sec')
 
-    exit()
+#     exit()
 
 
