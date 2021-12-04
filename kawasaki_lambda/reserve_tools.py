@@ -464,8 +464,7 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
             # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
             if _time not in want_hour_list:
                 logger.debug(f'not want hour: {_date} {_time}')
-                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
-                #continue
+                continue
             for _court in _court_list:
                 # 空きコート名から、施設名とコート名に分割する
                 _location_name = _court.split('／')[0]

@@ -148,7 +148,7 @@ def get_cookie_and_formdata(cfg, index, logger=None):
     #logger.debug(f'cookie index: # {index}')
     # ヘッダーを設定する
     headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36',
             }
     # cookieを取得する
     (cookies, response) = get_cookie_request(cfg, logger=logger)
@@ -243,7 +243,7 @@ def search_empty_reserves_from_datesearch(cfg, threadsafe_list, reqdata, datetim
         'Origin': cfg['origin_url'],
         'Referer': cfg['search_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     }
     # reqdataからcookieとフォームデータを生成する
     cookies = dict(reqdata[th_index][0])
@@ -299,7 +299,7 @@ def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res
         'Origin': cfg['origin_url'],
         'Referer': _referer,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     }
     # フォームデータを変更する
     # doPagerの値をsubmitに変更する
@@ -525,11 +525,11 @@ def login_request(cfg, cookies, form_data):
         'Origin': cfg['origin_url'],
         'Referer': cfg['first_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     }
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
-    #print(headers)
+    #print(f'headers before login: {headers}')
     #print(cookies)
     #print(params)
     # フォームデータを使って、ログインページを表示する。リダイレクトを許可する
@@ -584,7 +584,7 @@ def input_userdata_in_login(cfg, userid, password, securityid, cookies, headers,
     #     'Origin': cfg['origin_url'],
     #     'Referer': cfg['mypindex_url'],
     #     'Content-Type': 'application/x-www-form-urlencoded',
-    #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+    #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     # }
     _form_data = form_data
     # # ユーザーIDとパスワード、セキュリティ番号を入力する
@@ -603,8 +603,10 @@ def input_userdata_in_login(cfg, userid, password, securityid, cookies, headers,
     #_file_name = f'mypage.html'
     #_file = reserve_tools.save_html_to_filename(response, _file_name)
     # ログインしたことによりcookieが再発行されるので、cookiesを更新する
-        # 次のPOSTリクエストのためにヘッダーを作成する
+    # 次のPOSTリクエストのためにヘッダーを作成する
     headers['Referer'] = f'{response.url}'
+    # 次のPOSTリクエストのためにクッキーのJSESSIONIDをレスポンスで新たに発行されたものに置き換える
+    cookies['JSESSIONID'] = response.cookies['JSESSIONID']
     return cookies, headers, response
 
 ## マイページから既存予約情報を取得する
@@ -698,7 +700,7 @@ def go_to_search_date_menu_with_userid(cfg, userid, cookies, headers):
     headers = {
         'Host': 'www.fureai-net.city.kawasaki.jp',
         'Referer': headers['Referer'],
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     }
     # クッキーにユーザーIDを追加する
     #cookies[cfg['cookie_name_04']] = str(cfg['userid'])
@@ -771,7 +773,7 @@ def do_reserves_from_datesearch(cfg, cookies, form_data, date, time, logger=None
         'Origin': cfg['origin_url'],
         'Referer': cfg['search_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
     }
     # 利用目的を取得し、フォームデータに代入する
     form_data['layoutChildBody:childForm:purpose'] = cfg['selected_purpose']
@@ -1308,7 +1310,7 @@ def main():
     message_bodies = []
     # WEBリクエストのヘッダー
     headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36',
             }
     # HTTPリクエストデータ
     reqdata = []
