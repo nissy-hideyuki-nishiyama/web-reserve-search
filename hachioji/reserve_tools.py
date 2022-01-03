@@ -339,7 +339,7 @@ def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
             # 文字列YYYYMMDDを作成する
             _date = str(_year) + str(_month).zfill(2) + str(_day).zfill(2)
             want_date_list.append(_date)
-    logger.info(f'want_date_list: {want_date_list}')
+    #logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
 
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
@@ -562,6 +562,61 @@ def create_date_list_hachioji(target_months_list, public_holiday, cfg, logger=No
             date_list.append(_date)
     logger.debug(date_list)
     return date_list
+
+## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
+def create_target_reserves_list_hachioji(reserves_list, want_date_list, want_hour_list, want_location_list, logger=None):
+    """
+    予約処理対象の希望日、希望時間帯のリストを作成する
+    """
+    # 希望日+希望時間帯のリストを初期化する
+    target_reserves_list = {}
+    # 空き予約リストから、空き予約日と値を取得する
+    for _date, _d_value in reserves_list.items():
+        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
+        if _date not in want_date_list:
+            logger.debug(f'not want day: {_date}')
+            continue
+        # 空き予約時間帯とコートリストを取得する
+        for _time, _court_list in _d_value.items():
+            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
+            if _time not in want_hour_list:
+                logger.debug(f'not want hour: {_date} {_time}')
+                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
+                #continue
+            # 空きコートが希望空きコートリストに含まれていない場合は次のコートに進む
+            for _court in _court_list:
+                # 空きコート名から、施設名とコート名に分割する
+                #_location_name = _court.split(' ')[0]
+                #_court_name = _court.split(' ')[1]
+                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
+                if _court not in want_location_list:
+                    logger.debug(f'not want location: {_date} {_time} {_court}')
+                    continue
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化後、時間帯を追加する
+                if _date not in target_reserves_list:
+                    target_reserves_list[_date] = {}
+                    target_reserves_list[_date][_time] = []
+                    target_reserves_list[_date][_time].append(_court)
+                    logger.debug(f'regist target reserves list: {_date} {_time} {_court}')
+                # ある場合は時間帯を追加する
+                else:
+                    # 同じ時間帯がない場合は時間帯は追加する
+                    if _time not in target_reserves_list[_date]:
+                        target_reserves_list[_date][_time] = []
+                        target_reserves_list[_date][_time].append(_court)
+                        logger.info(f'regist target reserves list: {_date} {_time} {_court}')
+                    else:
+                        # 次の時間帯に進む
+                        logger.debug(f'found {_time} in target reserves list. therefore next time.')
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
+    # 希望日+希望時間帯のリストを返す
+    #print(f'{target_reserves_list}')
+    return target_reserves_list
+
 
 # LINEに空き予約を送信する
 ## メッセージ本文の作成
