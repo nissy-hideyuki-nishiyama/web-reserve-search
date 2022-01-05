@@ -55,11 +55,12 @@ def setup_driver(headers):
     """
     # Chromeを指定する
     options = webdriver.ChromeOptions()
-    #options.binary_location = '/usr/bin/chromium-browser'
     options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument(f'--user-agent={headers["User-Agent"]}')
+    # GUIによるデバッグ用。GUIでデバックする場合はこちらを選択する
+    #options.binary_location = '/usr/bin/chromium-browser'
     #driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', options=options)
     driver = webdriver.Chrome('/usr/lib64/chromium-browser/chromedriver', options=options)
     #driver.set_window_size('800', '600')
@@ -321,7 +322,7 @@ class ThreadSafeReservesList:
 
 # ログインする
 @reserve_tools.elapsed_time
-def login_proc(cfg, driver, headers, userid, password, logger=None):
+def login_proc(cfg, headers, userid, password, logger=None):
     """
     ログインする
     """
@@ -329,10 +330,10 @@ def login_proc(cfg, driver, headers, userid, password, logger=None):
     # 利用者番号とパスワードを設定する
     _userid = userid
     _password = password
-    # 待機時間を設定する
-    wait = WebDriverWait(driver, 10)
     # クローラーの初期化
     ( driver, mouse ) = setup_driver(headers)
+    # 待機時間を設定する
+    wait = WebDriverWait(driver, 10)
     # 空き予約ページにアクセスし、cookieを取得する
     ( cookies , response )= selenium_get_cookie(driver, cfg, logger=logger)
     # 利用者番号とパスワードを入力する
@@ -346,22 +347,132 @@ def login_proc(cfg, driver, headers, userid, password, logger=None):
     f_password = wait.until(EC.presence_of_element_located((By.NAME, "password")))
     # パスワードフィールドに入力されている値をクリアする
     f_password.clear()
-    # パスワードフィールドに利用者番号を入力する
-    f_password.send_keys(str(_userid))
     # パスワードフィールドにパスワードを入力する
     f_password.send_keys(str(_password))
+    # デバック用
+    # _html = driver.page_source
+    # with open('top01.html', mode='w', encoding='utf-8', errors='ignore') as f:
+    #     f.write(_html)
     # 「ログイン」ボタンをクリックする
     driver.find_element_by_xpath('//*[@id="pageTop"]/article/section[2]/div/form[1]/table/tbody/tr[3]/td/input[4]').click()
     http_req_num += 1
-    assert 'ご利用者さまトップ｜八王子市施設予約システム>' in driver.title
+    # 「ご利用者さまトップ｜八王子市施設予約システム」タイトルが含まれるまで待機する
+    wait.until(EC.title_contains("ご利用者さまトップ｜八王子市施設予約システム"))
+    # 画面のtitleを確認する
+    assert 'ご利用者さまトップ｜八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 現在の予約済み情報を取得する。予約数の上限がないので実装しない(TBD)
-#@reserve_tools.elapsed_time
-#def get_current_reserves_list():
-#    """
-#    現在の予約情報を取得する
-#    """
+@reserve_tools.elapsed_time
+def get_current_reserves_list(driver, mouse, cfg, logger=None):
+    """
+    現在の予約情報を取得する
+    - メニューバーの「予約確認／取り消し、抽選の確認／取消し、当選申請」をクリックして、予約一覧ページに移動する
+    - 予約一覧を取得する
+    - ページヘッダーメニューの「随時予約・抽選申込」をクリックして空き予約検索ページに移動する
+    """
+    global http_req_num
+    # 待機時間を設定する
+    wait = WebDriverWait(driver, 10)
+    # mypageのURLにリダイレクトされるまで待機する
+    wait.until(EC.url_to_be(cfg['mypage_url']))
+    # 検索ページがすべて表示されるまで待機する
+    wait.until(EC.presence_of_all_elements_located)
+    # デバック用
+    # _html = driver.page_source
+    # with open('mypage.html', mode='w', encoding='utf-8', errors='ignore') as f:
+    #     f.write(_html)
+    # メニューバーの「予約確認／取り消し、抽選の確認／取消し、当選申請」をクリックする
+    driver.find_element_by_xpath('/html/body/div[1]/article/section[2]/ul/li[2]/form/a').click()
+    http_req_num += 1
+    # 予約一覧ページがDOM上にすべて表示されるまで待機する
+    wait.until(EC.presence_of_all_elements_located)
+    wait.until(EC.title_contains("予約・抽選確認｜八王子市施設予約システム"))
+    # 画面のtitleを確認する
+    assert '予約・抽選確認｜八王子市施設予約システム' in driver.title
+    # デバック用
+    _html = driver.page_source
+    with open('reserve.html', mode='w', encoding='utf-8', errors='ignore') as f:
+        f.write(_html)
+    # 予約情報リストを取得する
+    reserved_list = analyze_reserved_list(cfg, _html, logger=logger)
+    # ページヘッダーメニューの「随時予約・抽選申込」をクリックする
+    driver.find_element_by_xpath('//*[@id="pageTop"]/header/nav/ul/li[2]/form/a').click()
+    http_req_num += 1
+    # 検索ページがDOM上にすべて表示されるまで待機する
+    wait.until(EC.presence_of_all_elements_located)
+    wait.until(EC.title_contains("空き状況を検索｜八王子市施設予約システム"))
+    # 画面のtitleを確認する
+    assert '空き状況を検索｜八王子市施設予約システム' in driver.title
+    return driver, mouse, reserved_list
+
+# 予約一覧リストから予約情報を取得する
+@reserve_tools.elapsed_time
+def analyze_reserved_list(cfg, html, logger=None):
+    """
+    予約一覧ページから予約情報を取得する
+    """
+    # 予約情報リストの初期化
+    _reserved_list = {}    
+    # HTML中の行頭の空白行や行末の空白行、改行コードを削除する
+    # 複数行文字列オブジェクトとなっている
+    # 先頭と末尾の複数の空白を削除する
+    html = re.sub(r"^\s+|\s+$", "", html)
+    # 2行目以降の行頭の空白を削除する。改行コードに続く複数の空白を削除する
+    html = re.sub(r"\r\s+|\n\s+", "", html)
+    soup = BeautifulSoup(html, features='html.parser')
+    #logger.debug(f'html_doc: {soup}')
+    # 空き状況カレンダーのテーブルを取得する
+    _table = soup.find('table', summary="予約一覧")
+    #logger.debug(f'SummaryTable: {_table}')
+    _tbody = _table.tbody
+    #logger.debug(f'tbody tag: {_tbody}')
+    # 予約情報を取得する
+    for _tr in _tbody.find_all('tr'):
+        #logger.debug(f'tr tag: {_tr}')
+        _facility = _tr.contents[0].string
+        _court = _tr.contents[1].string
+        # 施設名とコート名を空白スペースで結合する
+        _facility_court = _facility + ' ' + _court
+        _date = _tr.contents[2].string
+        _date = _date[:4] + _date[5:7] + _date[8:10]
+        #logger.debug(f'date: {_date}')
+        _time = _tr.contents[3].string
+        _status = _tr.contents[4].string
+        #logger.debug(f'status: {_status}')
+        # 状態が申込でないなら、次の予約情報に移動する
+        if str(_status) != '申込':
+            #logger.debug(f'not entried: {_date} {_time} {_facility} {_court}')
+            continue
+        # 予約情報として予約情報リストに追加する
+        # 予約リストに発見した日がなければ、年月日をキーとして初期化する
+        if _date not in _reserved_list:
+            _reserved_list[_date] = {}
+            _reserved_list[_date].setdefault(_time, []).append(_facility_court)
+            #logger.debug(f'entried: {_date} {_time} {_facility} {_court}')
+        # 予約リストに発見した日が登録されていた場合
+        else:
+            # 空き予約リストに発見した時間帯がなければ、時間をキーとしてリストを初期化する
+            if _time not in _reserved_list[_date]:
+                _reserved_list[_date][_time] = []
+            _reserved_list[_date][_time].append(_facility_court)
+            #logger.debug(f'entried: {_date} {_time} {_facility} {_court}')
+    logger.debug(json.dumps(_reserved_list, indent=2, ensure_ascii=False))
+    return _reserved_list
+
+# 既存予約件数を取得する
+def get_reserved_num(reserved_list, logger=None):
+    """
+    既存予約件数を取得する
+    """
+    _reserved_num = 0
+    for _date, _date_value in reserved_list.items():
+        for _time, _court_list in _date_value.items():
+            for _court in _court_list:
+                _reserved_num += 1
+    # 予約件数を返す
+    #logger.info(f'reserved num: {_reserved_num}')
+    return _reserved_num
 
 # メニュー画面から「随時予約・抽選申込」を選択し、「空き状況を検索」画面移動する
 @reserve_tools.elapsed_time
@@ -372,13 +483,22 @@ def go_to_datesearch(driver, mouse, cfg, logger=None):
     global http_req_num
     # 待機時間を設定する
     wait = WebDriverWait(driver, 10)
+    # mypageのURLにリダイレクトされるまで待機する
+    wait.until(EC.url_to_be(cfg['mypage_url']))
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
+    # デバック用
+    # _html = driver.page_source
+    # with open('mypage.html', mode='w', encoding='utf-8', errors='ignore') as f:
+    #     f.write(_html)
     # メニューバーの「随時予約・抽選申込」をクリックする
     driver.find_element_by_xpath('/html/body/div[1]/article/section[2]/ul/li[1]/form/a').click()
-    #//*[@id="pageTop"]/article/section[2]/ul/li[1]/form/a
-    #/html/body/div[1]/article/section[2]/ul/li[1]/form/a
     http_req_num += 1
+    # 検索ページがDOM上にすべて表示されるまで待機する
+    #wait.until(EC.presence_of_all_elements_located)
+    wait.until(EC.title_contains("空き状況を検索｜八王子市施設予約システム"))
+    # 画面のtitleを確認する
+    assert '空き状況を検索｜八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 空き状況を検索するため、検索条件を入力して、空きコートを表示する
@@ -390,27 +510,58 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     global http_req_num
     # selectタイプの指定値
     shisetsuId = 2 # テニスコート
-    # DOM上に表示されるまで待機する
-    # 検索フォームのフィールド設定
+    # 日付を「YYYYMMDD」から「YYYY/MM/DD」に変換する
+    _date = date[:4] + '/' + date[4:6] + '/' + date[6:]
+    #logger.debug(f'_date: {_date}')
+    # DOM上に全て表示されるまで待機する
     wait = WebDriverWait(driver, 10)
+    # reserve/calenderのURLにリダイレクトされるまで待機する
+    wait.until(EC.url_to_be(cfg['calender_url']))
+    # 検索ページがDOM上にすべて表示されるまで待機する
+    wait.until(EC.presence_of_all_elements_located)
+    # デバック用
+    # _html = driver.page_source
+    # with open('calender01.html', mode='w', encoding='utf-8', errors='ignore') as f:
+    #     f.write(_html)
+    # 検索フォームのフィールド設定
     f_shisetsu = wait.until(EC.presence_of_element_located((By.NAME, "class")))
     # 分類フィールドで施設を選択する
-    f_shisetsu.clear()
-    Select(f_shisetsu).select_by_value(shisetsuId)
+    Select(f_shisetsu).select_by_value(f'{shisetsuId}')
     # 施設名フィールドで、「施設名」を選択する
     f_facility = wait.until(EC.presence_of_element_located((By.NAME, "facility_id")))
-    f_facility.clear()
-    Select(f_facility).select_by_value(facility_id)
+    f_facility = wait.until(EC.element_to_be_clickable((By.NAME, "facility_id")))
+    f_facility.click()
+    #logger.debug(f'f_facility: {f_facility}')
+    try:
+        Select(f_facility).select_by_value(f'{facility_id}')
+    except exceptions.StaleElementReferenceException:
+        f_facility = wait.until(EC.presence_of_element_located((By.NAME, "facility_id")))
+        Select(f_facility).select_by_value(f'{facility_id}')
+    except:
+        pass
+    #sleep(1)
     # 場所（面）フィールドで、「コート」を選択する
-    f_place= wait.until(EC.presence_of_element_located((By.NAME, "field_group_id")))
-    f_place.clear()
-    Select(f_place).select_by_value(court_id)
+    f_place = wait.until(EC.presence_of_element_located((By.ID, "place")))
+    f_place.click()
+    #logger.debug(f'f_place: {f_place}')
+    # デバック用
+    # _html = driver.page_source
+    # with open('calender02.html', mode='w', encoding='utf-8', errors='ignore') as f:
+    #     f.write(_html)
+    try:
+        Select(f_place).select_by_value(f'{court_id}')
+    except exceptions.StaleElementReferenceException:
+        f_place = wait.until(EC.presence_of_element_located((By.ID, "place")))
+        Select(f_place).select_by_value(f'{court_id}')
+    except:
+        pass
+    #sleep(1)
     # 開始日フィールドが表示されるまで待機後、指定する
     f_date = wait.until(EC.presence_of_element_located((By.NAME, "date")))
     # 開始日フィールドに入力されている値をクリアする
     f_date.clear()
     # 開始日フィールドに指定日を入力する
-    f_date.send_keys(str(date))
+    f_date.send_keys(str(_date))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
     f_period = driver.find_element_by_xpath('//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]')
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
@@ -432,7 +583,7 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
 
 # 表示された空きコートの空き時間帯を選択し、予約登録画面に移動する
 @reserve_tools.elapsed_time
-def select_empty_court_and_time(driver, mouse, cfg, logger=None):
+def select_empty_court_and_time(driver, mouse, cfg, time, logger=None):
     """
     表示された空きコートを選択する
     """
@@ -444,18 +595,20 @@ def select_empty_court_and_time(driver, mouse, cfg, logger=None):
     # 検索結果をHTMLソースとしてオブジェクトに保存する
     html = driver.page_source
     # 表示された空きコートの空き時間帯と空き状況カレンダーの空き時間帯の行数を取得する
-    ( _time , _row_num) = get_empty_time_and_row_number(html, cfg, logger=None)
+    ( _time , _row_num ) = get_empty_time_and_row_number(html, cfg, time, logger=logger)
     # 空きコートの空き時間帯のリンクをクリックする
     _xpath=f'//*[@id="pageTop"]/article/section[3]/article/section[2]/div[2]/div/table/tbody/tr[{_row_num}]/td[2]/form/a'
-    driver.find_element_by_xpath(f'_xpath').click()
+    #logger.debug(f'xpath for click: {_xpath}')
+    driver.find_element_by_xpath(f'{_xpath}').click()
     http_req_num += 1
+    wait.until(EC.title_contains("随時予約（確認）｜八王子市施設予約システム"))
     # 画面のtitleが予約登録画面であることを確認する
     assert '随時予約（確認）｜八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 検索した空きコートの空き時間帯を取得し、希望時間帯であるかを確認する
 @reserve_tools.elapsed_time
-def get_empty_time_and_row_number(html, cfg, logger=None):
+def get_empty_time_and_row_number(html, cfg, time, logger=None):
     """
     検索結果から空き時間帯を取得し、希望時間帯であるか確認する
     Returns:
@@ -463,10 +616,11 @@ def get_empty_time_and_row_number(html, cfg, logger=None):
         _row_num[int]: 表の行数
         [type]: [description]
     """
-    # 空き時間帯と表の行数
     soup = BeautifulSoup(html, features='html.parser')
+    #logger.debug(f'html_doc: {soup}')
     # 空き状況カレンダーのテーブルを取得する
-    _table = soup.find('table', _class="calTable")
+    _table = soup.find('table', class_="calTable")
+    #logger.debug(f'calTable: {_table}')
     _tbody = _table.tbody
     # 空き時間帯と表の行数を取得する
     _row_num = 0
@@ -475,13 +629,13 @@ def get_empty_time_and_row_number(html, cfg, logger=None):
         _time = _tr.contents[0].string
         _status = _tr.contents[1].string
         # 空き時間帯でないなら次の時間帯に移動する
-        if str(_status) == '×':
+        if str(_status) == '×' or str(_status) == '休':
             logger.debug(f'not empty time: {_time}')
             continue
-        # 空き予約の時間帯が希望時間帯リストに含まれているか確認する
-        if _time in cfg['want_hour_list']:
+        # 空き予約の時間帯が希望時間帯と一致しているか確認する
+        if str(_time) == str(time):
             # 希望時間帯リストに含まれている場合は終了する
-            logger.debug(f'found emtpy time: {_time}')
+            logger.debug(f'matched emtpy time and get row_num: {_time} {_row_num}')
             break
     # 空き時間帯と空き状況カレンダーの行数を返す
     return _time, _row_num
@@ -501,12 +655,24 @@ def entry_reserve(driver, mouse, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # 利用目的を選択する
-    f_purpose = driver.find_element_by_xpath('//*[@id="purpose"]')
-    # 利用目的フィールドに
-    f_purpose.select_by_value(_purpose)
+    f_purpose = wait.until(EC.element_to_be_clickable((By.ID, "purpose")))
+    f_purpose.click()
+    #logger.debug(f'f_purpose: {f_purpose}')
+    try:
+        Select(f_purpose).select_by_value(f'{_purpose}')
+    except exceptions.StaleElementReferenceException:
+        f_facility = wait.until(EC.presence_of_element_located((By.ID, "purpose")))
+        Select(f_purpose).select_by_value(f'{_purpose}')
+    except:
+        pass
+    # 利用目的を選択する
+    #f_purpose = driver.find_element_by_xpath('//*[@id="purpose"]')
+    # 利用目的フィールドに硬式テニスの値を選択する
+    #f_purpose.select_by_value(f'{_purpose}')
     # 「申込」ボタンをクリックする
     driver.find_element_by_xpath('//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/input[4]').click()
     http_req_num += 1
+    wait.until(EC.title_contains("随時予約（完了）｜八王子市施設予約システム"))
     # 随時予約（完了）画面であることを確認する
     assert '随時予約（完了）｜八王子市施設予約システム' in driver.title
     return driver, mouse
@@ -598,10 +764,14 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
     """
     予約処理のメインルーチン
     """
-    # 予約できた件数
-    reserved_num = 0
-    # 1回の最大予約件数
-    max_reserved_num = cfg['reserved_limit_at_onetime']
+    # 全体で予約できた件数
+    whole_reserved_num = 0
+    # 1回の予約処理の全体の最大予約件数
+    max_whole_reserved_num = cfg['whole_reserved_limit_at_onetime']
+    # ユーザー毎の既存予約件数を含めた最大件数
+    max_user_reserved_num = cfg['reserved_limit']
+    # 1回の予約処理のユーザー毎の最大予約件数
+    max_user_reserved_num_at_onetime = cfg['user_reserved_limit_at_onetime']
     # 空き予約リストに値があるかないかを判断し、予約処理を開始する
     if len(reserves_list) == 0:
         logger.info(f'stop do reserve because no empty reserve.')
@@ -626,17 +796,13 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
         return logger
     # menu_map.jsonを読み込み、Dictに保存する
     menu_map = reserve_tools.read_json_cfg('menu_map.json')
-    # クローラーの初期化
-    ( driver, mouse ) = setup_driver(headers)
-    # 空き予約ページにアクセスし、cookieを取得する
-    ( cookies , response )= selenium_get_cookie(driver, cfg)
     # 複数IDに対応する
     userauth = cfg['userauth']
     # タイプ毎のID:PASSリストを取得する
     for _type, _type_list in userauth.items():
         # 予約できた件数が1回の最大予約件数を超えていたら終了する
-        if reserved_num >= max_reserved_num:
-            logger.info(f'exceeded reserved number at onetime.')
+        if whole_reserved_num >= max_whole_reserved_num:
+            logger.info(f'exceeded whole reserved number({max_whole_reserved_num}) at onetime.')
             break
         # タイプ別のID:PASSリストが空の場合は次のタイプに移る
         if not bool(_type_list):
@@ -645,40 +811,92 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
         # 利用者ID毎に予約処理を開始する
         ## IDとパスワードを取得する
         for _userid, _credential in _type_list.items():
+            # ユーザー毎の予約確定件数を初期化する
+            user_reserverd_num = 0
+            user_reserved_num_at_onetime = 0
             # 予約できた件数が1回の最大予約件数を超えていたら終了する
-            if reserved_num >= max_reserved_num:
-                logger.info(f'exceeded reserved number at onetime.')
+            if whole_reserved_num >= max_whole_reserved_num:
+                logger.info(f'exceeded whole reserved number({max_whole_reserved_num}) at onetime.')
                 break
             _password = _credential['password']
             logger.info(f'UserID:{_userid}, PASS:{_password} is logined.')
             # ログインIDを使ってログインする
-            ( driver, mouse ) = login_proc(cfg, driver, headers, _userid, _password, logger=None)
+            ( driver, mouse ) = login_proc(cfg, headers, _userid, _password, logger=logger)
+            # 既存予約済みリストを取得するため、「予約一覧ページ」画面に移動する。予約情報リストを取得後、「空き状況を検索」画面移動する
+            ( driver, mouse, user_reserved_list ) = get_current_reserves_list(driver, mouse, cfg, logger=logger)
+            # 既存予約件数を取得する
+            user_reserved_num = get_reserved_num(user_reserved_list, logger=logger)
+            logger.info(f'reserved num of userID({_userid}): {user_reserved_num}')
+            # 既存予約済みリストと希望予約リストを比較し、既存予約済みリストと日時と時間帯の予約が重なっている場合はユーザー毎の希望予約リストに追加しない
+            ( user_target_reserves_list ) = reserve_tools.create_user_target_reserves_list(target_reserves_list, user_reserved_list, logger=logger)
+            # 予約処理を省略するためのデバッグ用
+            # continue
             # 予約処理を開始する
             # メニュー画面から「随時予約・抽選申込」を選択し、「空き状況を検索」画面移動する
-            ( driver, mouse ) = go_to_datesearch(driver, mouse, cfg, logger=None)
+            #( driver, mouse ) = go_to_datesearch(driver, mouse, cfg, logger=logger)
             # 希望日+希望時間帯+希望コートのリストから検索条件を取得する
-            for _date in target_reserves_list:
-                for _time, _court_list in target_reserves_list[_date].items():
+            for _date in user_target_reserves_list:
+                # 既存予約件数が最大予約件数を超えていたら終了する
+                if user_reserved_num >= max_user_reserved_num:
+                    logger.info(f'exceeded user reserved number({max_user_reserved_num}).')
+                    break
+                # 予約できた件数が1回の予約処理の最大予約件数を超えていたら終了する
+                if user_reserved_num_at_onetime >= max_user_reserved_num_at_onetime:
+                    logger.info(f'exceeded user reserved number({max_user_reserved_num_at_onetime}) at onetime.')
+                    break
+                for _time, _court_list in user_target_reserves_list[_date].items():
+                    # 既存予約件数が最大予約件数を超えていたら終了する
+                    if user_reserved_num >= max_user_reserved_num:
+                        logger.info(f'exceeded user reserved number({max_user_reserved_num}).')
+                        break
+                    # 予約できた件数が1回の予約処理の最大予約件数を超えていたら終了する
+                    if user_reserved_num_at_onetime >= max_user_reserved_num_at_onetime:
+                        logger.info(f'exceeded user reserved number({max_user_reserved_num_at_onetime}) at onetime.')
+                        break
                     for _court in _court_list:
-                        # 予約できた件数が1回の最大予約件数を超えていたら終了する
-                        if reserved_num >= max_reserved_num:
-                            logger.info(f'exceeded reserved number at onetime.')
+                        # 既存予約件数が最大予約件数を超えていたら終了する
+                        if user_reserved_num >= max_user_reserved_num:
+                            logger.info(f'exceeded user reserved number({max_user_reserved_num}).')
+                            break
+                        # 予約できた件数が1回の予約処理の最大予約件数を超えていたら終了する
+                        if user_reserved_num_at_onetime >= max_user_reserved_num_at_onetime:
+                            logger.info(f'exceeded reserved number({max_user_reserved_num_at_onetime}) at onetime.')
                             break
                         _facility_name = _court.split(' ')[0]
                         _court_name = _court.split(' ')[1]
                         _facility_id = menu_map['facility_id'][_facility_name]
-                        _court_id = menu__map['field_group_id'][_facility_name][_court_name]
-                        logger.debug(f'input data for search: {_date} {_facility_id} {_court_id}')
+                        _court_id = menu_map['field_group_id'][_facility_name][_court_name]
+                        logger.debug(f'input data for search: {_date} {_time} {_court} {_facility_id} {_court_id}')
                         # 空き状況を検索するため、検索条件を入力して、空きコートを表示する
-                        ( driver, mouse ) = display_target_reserve(driver, mouse, cfg, _date, _facility_id, _court_id, logger=None)
+                        ( driver, mouse ) = display_target_reserve(driver, mouse, _date, _facility_id, _court_id, logger=logger)
                         # 表示された空きコートの空き時間帯を選択し、予約登録画面に移動する
-                        ( driver, mouse ) = select_empty_court_and_time(driver, mouse, cfg, logger=None)
+                        ( driver, mouse ) = select_empty_court_and_time(driver, mouse, cfg, _time, logger=logger)
                         # 予約登録画面で利用目的を選択し、申込むボタンをクリックし、予約する
-                        ( driver, mouse ) = entry_reserve(driver, mouse, logger=None)
-                        logger.debug(f'registed reserve: {_date} {_time} {_court}')
-                        reserved_num += 1
+                        ( driver, mouse ) = entry_reserve(driver, mouse, logger=logger)
+                        logger.info(f'registed reserve: {_date} {_time} {_court}')
+                        # 予約できたものは発見した空き予約リスト(昇順)から削除する
+                        # 削除しないと次の利用者IDの予約時に今予約したものを検索をしてしまうため
+                        logger.debug(f'delete from target_reserves_list: {_date} {_time} {_court}')
+                        _index = target_reserves_list[_date][_time].index(_court)
+                        del target_reserves_list[_date][_time][_index]
+                        # ユーザー毎と全体の予約確定件数をカウントアップする
+                        user_reserved_num_at_onetime += 1
+                        user_reserved_num += 1
+                        whole_reserved_num += 1
+                        # 予約確定通知のメッセージを作成する
+                        # 八王子市は予約番号はないため、Nullとする
+                        reserved_number = 'None'
+                        # 予約確定した予約情報を作成する。共通化しているため、既存のJSONフォーマットと同じにする
+                        reserve = { _date: { _time: [ _court ] } }
+                        # 送信メッセージリストの初期化
+                        message_bodies = []
+                        message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
+                        # LINEに送信する
+                        reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
                         # 空き状況の検索ページへ戻る
-                        ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=None)
+                        ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=logger)
+            # クローラーのWEBブラウザを終了する
+            driver.quit()
     return logger
 
 if __name__ == '__main__':
