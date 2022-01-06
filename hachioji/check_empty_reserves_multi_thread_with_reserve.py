@@ -390,10 +390,10 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     wait.until(EC.title_contains("予約・抽選確認｜八王子市施設予約システム"))
     # 画面のtitleを確認する
     assert '予約・抽選確認｜八王子市施設予約システム' in driver.title
-    # デバック用
     _html = driver.page_source
-    with open('reserve.html', mode='w', encoding='utf-8', errors='ignore') as f:
-        f.write(_html)
+    # デバック用
+    #with open('reserve.html', mode='w', encoding='utf-8', errors='ignore') as f:
+    #    f.write(_html)
     # 予約情報リストを取得する
     reserved_list = analyze_reserved_list(cfg, _html, logger=logger)
     # ページヘッダーメニューの「随時予約・抽選申込」をクリックする
@@ -514,7 +514,7 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     _date = date[:4] + '/' + date[4:6] + '/' + date[6:]
     #logger.debug(f'_date: {_date}')
     # DOM上に全て表示されるまで待機する
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 10, 3)
     # reserve/calenderのURLにリダイレクトされるまで待機する
     wait.until(EC.url_to_be(cfg['calender_url']))
     # 検索ページがDOM上にすべて表示されるまで待機する
@@ -527,6 +527,8 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     f_shisetsu = wait.until(EC.presence_of_element_located((By.NAME, "class")))
     # 分類フィールドで施設を選択する
     Select(f_shisetsu).select_by_value(f'{shisetsuId}')
+    # DOM上で更新されるため、その更新期間だけ待機する
+    time.sleep(1)
     # 施設名フィールドで、「施設名」を選択する
     f_facility = wait.until(EC.presence_of_element_located((By.NAME, "facility_id")))
     f_facility = wait.until(EC.element_to_be_clickable((By.NAME, "facility_id")))
@@ -541,7 +543,10 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
         pass
     #sleep(1)
     # 場所（面）フィールドで、「コート」を選択する
+    # DOM上で更新されるため、その更新期間だけ待機する
+    time.sleep(1)
     f_place = wait.until(EC.presence_of_element_located((By.ID, "place")))
+    #f_place = wait.until(EC.element_to_be_clickable((By.NAME, "place")))
     f_place.click()
     #logger.debug(f'f_place: {f_place}')
     # デバック用
@@ -651,10 +656,11 @@ def entry_reserve(driver, mouse, logger=None):
     # 硬式テニスの値
     _purpose = 150 
     # 待機時間を設定する
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 10, 3)
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # 利用目的を選択する
+    f_purpose = wait.until(EC.presence_of_element_located((By.ID, "purpose")))
     f_purpose = wait.until(EC.element_to_be_clickable((By.ID, "purpose")))
     f_purpose.click()
     #logger.debug(f'f_purpose: {f_purpose}')
@@ -670,7 +676,12 @@ def entry_reserve(driver, mouse, logger=None):
     # 利用目的フィールドに硬式テニスの値を選択する
     #f_purpose.select_by_value(f'{_purpose}')
     # 「申込」ボタンをクリックする
-    driver.find_element_by_xpath('//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/input[4]').click()
+    # driver.find_element_by_xpath('//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/input[4]').click()
+    f_entry = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/input[4]')))
+    # reCHAPTCHAでインターセプトされて、下記のアラームが発生することがあるため、click()をやめる
+    # selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted:
+    #f_entry.click()
+    driver.execute_script("arguments[0].click();", f_entry)
     http_req_num += 1
     wait.until(EC.title_contains("随時予約（完了）｜八王子市施設予約システム"))
     # 随時予約（完了）画面であることを確認する
@@ -693,7 +704,7 @@ def return_to_datesearch(driver, mouse, cfg, logger=None):
     http_req_num += 1
     return driver, mouse
 
-# メインルーチン
+# 空き予約検索のメインルーチン
 @reserve_tools.elapsed_time
 def main_search_empty_reserves():
     """
@@ -708,14 +719,14 @@ def main_search_empty_reserves():
     message_bodies = []
     # WEB request header
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'
     }
 
     # 処理の開始
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg2.json')
+    cfg = reserve_tools.read_json_cfg('cfg.json')
     # ロギングを設定する
     logger = reserve_tools.mylogger(cfg)
     # スレッド数を設定する
@@ -830,7 +841,7 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
             # 既存予約済みリストと希望予約リストを比較し、既存予約済みリストと日時と時間帯の予約が重なっている場合はユーザー毎の希望予約リストに追加しない
             ( user_target_reserves_list ) = reserve_tools.create_user_target_reserves_list(target_reserves_list, user_reserved_list, logger=logger)
             # 予約処理を省略するためのデバッグ用
-            # continue
+            #continue
             # 予約処理を開始する
             # メニュー画面から「随時予約・抽選申込」を選択し、「空き状況を検索」画面移動する
             #( driver, mouse ) = go_to_datesearch(driver, mouse, cfg, logger=logger)
