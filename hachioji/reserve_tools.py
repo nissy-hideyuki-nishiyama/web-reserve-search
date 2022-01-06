@@ -339,7 +339,7 @@ def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
             # 文字列YYYYMMDDを作成する
             _date = str(_year) + str(_month).zfill(2) + str(_day).zfill(2)
             want_date_list.append(_date)
-    logger.info(f'want_date_list: {want_date_list}')
+    #logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
 
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
@@ -428,6 +428,173 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
     # 希望日+希望時間帯のリストを返す
     #print(f'{target_reserves_list}')
     return target_reserves_list
+
+# 予約リストのdictから指定日の時間帯の最小値と最大値を取得する
+def get_min_and_max_time(reserves_list, date, split_string, logger=None):
+    """
+    予約リストのdictから指定日の時間帯の最小値と最大値を取得する
+    """
+    # 文字列を分割する文字を取得する
+    _split_string = str(split_string)
+    # 時間帯の最小値と最大値を初期化する
+    min_time = datetime.time(23, 59, 59) 
+    max_time = datetime.time(0, 0, 0)
+    # 予約リストのdictに指定日が存在しない場合は、Noneを返す
+    if date not in reserves_list:
+        #logger.debug(f'not found {date} in reserves_list')
+        #return datetime.time(0, 0, 0), datetime.time(23, 59, 59)
+        return None, None
+    else:
+        for _time in reserves_list[date]:
+            # 時間帯を開始時間と終了時間に分割する
+            ( start_time, end_time ) = get_start_and_end_time(_time, _split_string, logger=logger)
+            # 時間帯の最小値よりも開始時間が小さい場合は、時間帯の最小値を置換する
+            if start_time < min_time:
+                min_time = start_time
+            # 時間帯の最大値よりも終了時間が大きい場合は、時間帯の最大値を置換する
+            if end_time > max_time:
+                max_time = end_time
+            #logger.debug(f'min_time: {min_time} , max_time: {max_time}')
+    # 時間帯の最小値と最大値を返す
+    logger.debug(f'date( {date} ) final: min_time: {min_time} , max_time: {max_time}')
+    return min_time, max_time
+
+# 時間帯の文字列から開始時間と終了時間を取得する
+def get_start_and_end_time(time, split_string, logger=None):
+    """
+    時間帯の文字列から開始時間と終了時間を取得する
+    """
+    # 文字列を分割する文字を取得する
+    _split_string = str(split_string)
+    # 時間帯を開始時間と終了時間に分割する
+    start_time_string = time.split(f'{_split_string}')[0]
+    start_time_hour = int(start_time_string.split(':')[0])
+    start_time_min = int(start_time_string.split(':')[1])
+    end_time_string = time.split(f'{_split_string}')[1]
+    end_time_hour = int(end_time_string.split(':')[0])
+    end_time_min = int(end_time_string.split(':')[1])
+    start_time = datetime.time(start_time_hour, start_time_min, 0)
+    end_time = datetime.time(end_time_hour, end_time_min, 0)
+    logger.debug(f'start_time: {start_time}, end_time: {end_time}')
+    return start_time, end_time
+
+# 現在の時間帯(min_time, max_time)を開始時間(start_time)と終了時間(end_time)で条件を満たしていたら更新する
+def update_min_and_max_time(min_time, max_time, start_time, end_time, logger=None):
+    """[summary]
+    現在の時間帯(min_time, max_time)を開始時間(start_time)と終了時間(end_time)で条件を満たしていたら更新する
+    開始時間がmin_timeより小さい場合は開始時間をmin_timeとする
+    終了時間がmax_timeより大きい場合は終了時間をmax_timeとする
+    Args:
+        min_time ([Time]): 時間帯の最小時間
+        max_time ([Time]): 時間帯の最大時間
+        start_time ([Time]): 開始時間
+        end_time ([Time]): 終了時間
+        いずれも、datetimeモジュールのdatetime.timeオブジェクト
+
+    Returns:
+        min_time [Time]: 更新された時間帯の最小時間
+        max_time [Time]: 更新された時間帯の最大時間
+    """
+    # 時間帯の最小時間と開始時間を比較する。最小時間がNoneまたは開始時間が小さければ、最小時間を置き換える。
+    if min_time == None or start_time < min_time:
+        min_time = start_time
+    # 時間帯の最大時間と終了時間を比較する。最大時間がNoneまたは終了時間が大きれければ、最大時間を置き換える
+    if max_time == None or end_time > max_time:
+        max_time = end_time
+    # 時間帯の最小時間と最大時間を返す
+    logger.debug(f'updated min_time: {min_time}, max_time: {max_time}')
+    return min_time, max_time
+
+# ユーザー毎の希望予約リストを作成する
+# ユーザー毎既存予約済みリストと希望予約リストを比較し、既存予約済みリストと日時と時間帯の予約が重なっている場合はユーザー毎の希望予約リストに追加しない
+def create_user_target_reserves_list(target_reserves_list, user_reserved_list, logger=None):
+    """
+    ユーザー毎の希望予約リストを作成する
+    ユーザー毎既存予約済みリストと希望予約リストを比較し、既存予約済みリストと日付と時間帯の予約が重なっている場合はユーザー毎の希望予約リストに追加しない
+    """
+    # ユーザー毎希望予約リストを初期化する
+    user_target_reserves_list = {}
+    # ユーザー毎既存予約済みリスト
+    # 空き予約検索で見つけた希望予約リストを走査する
+    # 日付のキーを取得する
+    for _date, _time_dict in target_reserves_list.items():
+        # ユーザー毎既存予約済みリストの時間帯の最小値と最大値を取得する
+        ( min_time, max_time ) = get_min_and_max_time(user_reserved_list, _date, '～', logger=logger)
+        # 取得した日付がユーザー毎既存予約済みリストに存在するか確認する
+        if _date in user_reserved_list:
+            # 時間帯のキーを取得する
+            for _time, _court_list in _time_dict.items():
+                # 時間帯の文字列から開始時間と終了時間を取得する
+                ( start_time, end_time ) = get_start_and_end_time(_time, '～', logger=logger)
+                # 取得した時間帯がユーザー毎既存予約済みリストに存在するか確認する。存在したら次の時間帯の処理に進む
+                if _time in user_reserved_list[_date]:
+                    logger.debug(f'found reserve( {_date} {_time} ) in user_reserved_list')
+                    continue
+                else:
+                    # ユーザー毎希望予約リストにないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                    if _date not in user_target_reserves_list:
+                        # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                        # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                        if start_time >= max_time or end_time <= min_time :
+                            logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                            user_target_reserves_list[_date] = {}
+                            user_target_reserves_list[_date][_time] = _court_list
+                            # 次のキーの判定のために、min_timeとmax_timeを更新する
+                            ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+                    else:
+                        # 時間帯のキーがないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                        if _time not in user_target_reserves_list[_date]:
+                            # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する。
+                            # 重なっていると予約できないため。
+                            # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                            # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                            if start_time >= max_time or end_time <= min_time :
+                                logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                                user_target_reserves_list[_date][_time] = _court_list
+                                # 次のキーの判定のために、min_timeとmax_timeを更新する
+                                ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+        else:
+            # 時間帯のキーを取得する
+            for _time, _court_list in _time_dict.items():
+                # 時間帯の文字列から開始時間と終了時間を取得する
+                ( start_time, end_time ) = get_start_and_end_time(_time, '～', logger=logger)
+                # ユーザー毎希望予約リストにないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                if _date not in user_target_reserves_list:
+                    user_target_reserves_list[_date] = {}
+                    user_target_reserves_list[_date][_time] = _court_list
+                    # 次のキーの判定のために、min_timeとmax_timeを更新する
+                    ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+                else:
+                    # 日付のキーが存在したら、時間帯を確認する
+                    if _time in user_target_reserves_list[_date]:
+                        # ユーザー毎希望予約リストにその時間帯が存在していたら、次の時間帯の検索に移る
+                        continue
+                    else:
+                        # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                        # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                        if start_time >= max_time or end_time <= min_time :
+                            logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                            user_target_reserves_list[_date][_time] = _court_list
+                            # 次のキーの判定のために、min_timeとmax_timeを更新する
+                            ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+                    # for _utime in user_target_reserves_list[_date]:
+                    #     # 時間帯のキーがないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                    #     if _utime not in user_target_reserves_list[_date]:
+                    #         # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する。
+                    #         # 重なっていると予約できないため。
+                    #         # 時間帯の文字列から開始時間と終了時間を取得する
+                    #         ( start_time, end_time ) = get_start_and_end_time(_utime, '～', logger=logger)
+                    #         # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                    #         # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                    #         if start_time >= max_time or end_time <= min_time :
+                    #             logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                    #             user_target_reserves_list[_date][_time] = _court_list[0]
+                    #             # 次のキーの判定のために、min_timeとmax_timeを更新する
+                    #             ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+    # ユーザー毎希望予約リストを返す
+    logger.debug(f'user_target_reserves_list:')
+    logger.debug(json.dumps(user_target_reserves_list, indent=2, ensure_ascii=False))
+    return user_target_reserves_list
 
 # 東京都多摩市向け
 # 年月日(YYYYMMDD)の入力リストを作成する
@@ -562,6 +729,60 @@ def create_date_list_hachioji(target_months_list, public_holiday, cfg, logger=No
             date_list.append(_date)
     logger.debug(date_list)
     return date_list
+
+## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
+def create_target_reserves_list_hachioji(reserves_list, want_date_list, want_hour_list, want_location_list, logger=None):
+    """
+    予約処理対象の希望日、希望時間帯のリストを作成する
+    """
+    # 希望日+希望時間帯のリストを初期化する
+    target_reserves_list = {}
+    # 空き予約リストから、空き予約日と値を取得する
+    for _date, _d_value in reserves_list.items():
+        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
+        if _date not in want_date_list:
+            logger.debug(f'not want day: {_date}')
+            continue
+        # 空き予約時間帯とコートリストを取得する
+        for _time, _court_list in _d_value.items():
+            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
+            if _time not in want_hour_list:
+                logger.debug(f'not want hour: {_date} {_time}')
+                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
+                #continue
+            # 空きコートが希望空きコートリストに含まれていない場合は次のコートに進む
+            for _court in _court_list:
+                # 空きコート名から、施設名とコート名に分割する
+                #_location_name = _court.split(' ')[0]
+                #_court_name = _court.split(' ')[1]
+                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
+                if _court not in want_location_list:
+                    logger.debug(f'not want location: {_date} {_time} {_court}')
+                    continue
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化後、時間帯を追加する
+                if _date not in target_reserves_list:
+                    target_reserves_list[_date] = {}
+                    target_reserves_list[_date][_time] = []
+                    target_reserves_list[_date][_time].append(_court)
+                    logger.debug(f'regist target reserves list: {_date} {_time} {_court}')
+                # ある場合は時間帯を追加する
+                else:
+                    # 同じ時間帯がない場合は時間帯は追加する
+                    if _time not in target_reserves_list[_date]:
+                        target_reserves_list[_date][_time] = []
+                        target_reserves_list[_date][_time].append(_court)
+                        logger.info(f'regist target reserves list: {_date} {_time} {_court}')
+                    else:
+                        # 次の時間帯に進む
+                        logger.debug(f'found {_time} in target reserves list. therefore next time.')
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
+    # 希望日+希望時間帯のリストを返す
+    #logger.debug(f'{target_reserves_list}')
+    return target_reserves_list
 
 # LINEに空き予約を送信する
 ## メッセージ本文の作成

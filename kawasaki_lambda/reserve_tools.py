@@ -10,6 +10,8 @@ from dateutil.relativedelta import relativedelta
 ## ファイルIO、ディレクトリ関連　
 import os
 import sys
+import subprocess
+import pathlib
 
 ## JSON関連
 import json
@@ -29,6 +31,13 @@ from logging import (
     DEBUG, INFO, WARNING, ERROR, CRITICAL
 )
 from logging.handlers import RotatingFileHandler
+
+# AWS boto
+import boto3
+import botocore
+
+# S3クライアント
+s3 = boto3.resource('s3')
 
 # 設定ファイルの読み込み
 ## 祝日ファイル
@@ -59,6 +68,25 @@ def read_json_cfg(cfg_file_name):
         #print(cfg)
         return cfg
 
+# ファイルの存在の確認と存在しない場合はディレクトリ+空ファイルを作成する
+def check_exist_file_and_create_file(file_path):
+    """
+    ファイルが存在するか確認し、存在しない場合はディレクトリと空ファイルを作成する
+    """
+    # ファイルパスが存在する確認する。存在しない場合は空ファイルを作成する
+    if not os.path.exists(file_path):
+        print(f'not found {file_path} . create empty files.')
+        # ファイル名とパスを取得する
+        file_name = os.path.basename(file_path)
+        path_name = os.path.dirname(file_path)
+        # ファイルパス中ディレクトリの存在を確認し、存在しなければ中間ディレクトリ含めて作成する
+        if not os.path.exists(path_name):
+            os.makedirs(path_name, exist_ok=True)
+        # 空ファイルを作成する
+        emptyfile = pathlib.Path(file_path)
+        emptyfile.touch()
+    return None
+
 # loggerの設定
 def mylogger(cfg):
     """
@@ -70,12 +98,13 @@ def mylogger(cfg):
     _level_sh = cfg['logger_conf']['level_consolehandler']
     _logsize_maxbytes = cfg['logger_conf']['logsize_maxbytes']
     _backup_count = cfg['logger_conf']['backup_count']
+    # ログファイルの存在を確認し、存在しなければ作成する
+    check_exist_file_and_create_file(_logfile_path)
     #ロガーの生成
     logger = getLogger('mylog')
     #出力レベルの設定
     logger.setLevel(DEBUG)
     #ハンドラの生成
-    #fh = FileHandler(_logfile_path)
     fh = RotatingFileHandler(_logfile_path, mode='a', maxBytes=_logsize_maxbytes, backupCount=_backup_count)
     sh = StreamHandler(sys.stdout)
     # ハンドラーのレベルを設定
@@ -131,6 +160,44 @@ def save_html_to_filename_for_aiohttp(response, filename):
     print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(response)
+
+# 設定ファイルや祝日ファイルなど必要なファイルが/tmp以下に存在することを確認する
+def is_exist_files(s3bucket, *args):
+    """
+    設定ファイルと祝日ファイルが存在することを確認する
+    """
+    # ローカルのファイル保存先を指定する
+    for file_s3path in args:
+        # ファイル名のみ抽出する
+        file_name = os.path.basename(file_s3path)
+        file_path = '/tmp/' + file_name
+        # ファイルの存在を確認する
+        if os.path.isfile(file_path):
+            print(f'found {file_path}')
+        else:
+            #print(f'downloading {file_name} from s3.')
+            get_file_from_s3(s3bucket, file_s3path)
+
+# 設定ファイルと祝日ファイルなど必要なファイルをS3バケットから取得し、/tmpディレクトリに保存する
+def get_file_from_s3(s3bucket, file_s3path):
+    """
+    設定ファイルと祝日ファイルを所定のS3バケットから取得し、/tmpディレクトリに保存する
+    """
+    # バケット名とファイルパスを設定する
+    bucket_name = s3bucket
+    key = file_s3path
+    file_name = os.path.basename(file_s3path)
+    # ローカルのファイル保存先を指定する
+    file_path = '/tmp/' + file_name
+    # S3からファイルをダウンロードする
+    try:
+        bucket = s3.Bucket(bucket_name)
+        bucket.download_file(key, file_path)
+        print(subprocess.run(["ls", "-l", "/tmp" ], stdout=subprocess.PIPE))
+        print(f'downloaded {file_name} from s3bucket:{file_s3path}')
+        return
+    except Exception as e:
+        print(e)
 
 # 年越し処理
 def check_new_year(month):
@@ -397,8 +464,7 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
             # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
             if _time not in want_hour_list:
                 logger.debug(f'not want hour: {_date} {_time}')
-                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
-                #continue
+                continue
             for _court in _court_list:
                 # 空きコート名から、施設名とコート名に分割する
                 _location_name = _court.split('／')[0]
