@@ -5,9 +5,6 @@ import urllib
 
 ## カレンダー関連
 from time import sleep
-import math
-import datetime
-import calendar
 import time
 
 ## ファイルIO、ディレクトリ関連
@@ -21,7 +18,7 @@ import re
 import json
 
 # ツールライブラリを読み込む
-import reserve_tools
+from reserve_tools import reserve_tools
 
 # HTTPリクエスト数
 http_req_num = 0

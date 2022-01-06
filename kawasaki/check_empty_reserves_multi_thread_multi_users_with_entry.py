@@ -1,8 +1,5 @@
 # カレンダー関連
 from time import sleep
-import math
-import datetime
-import calendar
 import time
 
 # ファイルIO、ディレクトリ関連
@@ -37,7 +34,7 @@ from hashlib import md5
 from pathlib import Path
 
 # ツールライブラリを読み込む
-import reserve_tools
+from reserve_tools import reserve_tools
 
 # 検索結果ページの表示件数
 page_unit = 5

@@ -38,7 +38,7 @@ import re
 import json
 
 # ツールライブラリを読み込む
-import reserve_tools
+from reserve_tools import reserve_tools
 
 # HTTPリクエスト数
 http_req_num = 0
