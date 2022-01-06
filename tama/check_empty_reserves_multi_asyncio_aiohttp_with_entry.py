@@ -53,7 +53,7 @@ from hashlib import md5
 from pathlib import Path
 
 # ツールライブラリを読み込む
-import reserve_tools
+from reserve_tools import reserve_tools
 
 http_req_num = 0
 
