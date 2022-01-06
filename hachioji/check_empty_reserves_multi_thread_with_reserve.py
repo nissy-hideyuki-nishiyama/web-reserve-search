@@ -61,7 +61,6 @@ def setup_driver(headers):
     options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
     # GUIによるデバッグ用。GUIでデバックする場合はこちらを選択する
     #options.binary_location = '/usr/bin/chromium-browser'
-    #driver = webdriver.Chrome('/usr/lib64/chromium-browser/chromedriver', options=options)
     driver = webdriver.Chrome(service=chrome_service, options=options)
     #driver.set_window_size('800', '600')
     mouse = webdriver.ActionChains(driver)
@@ -102,7 +101,6 @@ def selenium_go_to_search_menu(driver, mouse, cfg, cookies, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # 空き状況を検索 画面に移動するため、右上の「空き状況を検索」ボタンをクリックする
-    #driver.find_element_by_xpath('/html/body/div[1]/header/section/div/form/p/a').click()
     driver.find_element(By.XPATH, '/html/body/div[1]/header/section/div/form/p/a').click()
     http_req_num += 1
     return None
@@ -131,7 +129,6 @@ def selenium_post_conditions(driver, date_list, reserves_list, cfg, logger=None)
         #reserve_tools.save_result_html(_html, f'hachioji_empty_reserves_{f_date}.html')
         #sleep(1)
         # HTML解析を実行し、空き予約名リストを作成する
-        #get_empty_court_time(cfg, reserves_list, _date, _html)
         get_empty_court_time(cfg, reserves_list, f_date, _html, logger=logger)
         # 条件をクリア ボタンをクリックして、次の検索の準備をする
 
@@ -166,14 +163,12 @@ def selenium_input_datas(driver, input_date, logger=None):
     #wait.until(EC.element_to_be_clickable((By.NAME, "disp_type")))
     #wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "btnSearch js_recaptcha_submit")))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
-    #f_period = driver.find_element_by_xpath("/html/body/div[1]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]")
     f_period = driver.find_element(By.XPATH, "/html/body/div[1]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]")
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
     f_period.click()
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
-    #driver.find_element_by_xpath(".//input[@type='button'][@value='検索する'][@class='btnSearch js_recaptcha_submit']").click()
     driver.find_element(By.XPATH, ".//input[@type='button'][@value='検索する'][@class='btnSearch js_recaptcha_submit']").click()
     #sleep(30)
     # 検索結果がすべて表示されるまで待機する
@@ -356,7 +351,6 @@ def login_proc(cfg, headers, userid, password, logger=None):
     # with open('top01.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # 「ログイン」ボタンをクリックする
-    #driver.find_element_by_xpath('//*[@id="pageTop"]/article/section[2]/div/form[1]/table/tbody/tr[3]/td/input[4]').click()
     driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form[1]/table/tbody/tr[3]/td/input[4]').click()
     http_req_num += 1
     # 「ご利用者さまトップ｜八王子市施設予約システム」タイトルが含まれるまで待機する
@@ -401,7 +395,6 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     # 予約情報リストを取得する
     reserved_list = analyze_reserved_list(cfg, _html, logger=logger)
     # ページヘッダーメニューの「随時予約・抽選申込」をクリックする
-    #driver.find_element_by_xpath('//*[@id="pageTop"]/header/nav/ul/li[2]/form/a').click()
     driver.find_element(By.XPATH, '//*[@id="pageTop"]/header/nav/ul/li[2]/form/a').click()
     http_req_num += 1
     # 検索ページがDOM上にすべて表示されるまで待機する
@@ -497,7 +490,6 @@ def go_to_datesearch(driver, mouse, cfg, logger=None):
     # with open('mypage.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # メニューバーの「随時予約・抽選申込」をクリックする
-    #driver.find_element_by_xpath('/html/body/div[1]/article/section[2]/ul/li[1]/form/a').click()
     driver.find_element(By.XPATH, '/html/body/div[1]/article/section[2]/ul/li[1]/form/a').click()
     http_req_num += 1
     # 検索ページがDOM上にすべて表示されるまで待機する
@@ -574,14 +566,12 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     # 開始日フィールドに指定日を入力する
     f_date.send_keys(str(_date))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
-    #f_period = driver.find_element_by_xpath('//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]')
     f_period = driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]')
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
     f_period.click()
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
-    #driver.find_element_by_xpath('//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[5]/td/input[2]').click()
     driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[5]/td/input[2]').click()
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
@@ -612,7 +602,6 @@ def select_empty_court_and_time(driver, mouse, cfg, time, logger=None):
     # 空きコートの空き時間帯のリンクをクリックする
     _xpath=f'//*[@id="pageTop"]/article/section[3]/article/section[2]/div[2]/div/table/tbody/tr[{_row_num}]/td[2]/form/a'
     #logger.debug(f'xpath for click: {_xpath}')
-    #driver.find_element_by_xpath(f'{_xpath}').click()
     driver.find_element(By.XPATH, f'{_xpath}').click()
     http_req_num += 1
     wait.until(EC.title_contains("随時予約（確認）｜八王子市施設予約システム"))
@@ -708,7 +697,6 @@ def return_to_datesearch(driver, mouse, cfg, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # メニューバーの「随時予約・抽選申込」をクリックする
-    #driver.find_element_by_xpath('//*[@id="pageTop"]/article/section/form/nav/a').click()
     driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section/form/nav/a').click()
     http_req_num += 1
     return driver, mouse
@@ -853,7 +841,6 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
             #continue
             # 予約処理を開始する
             # メニュー画面から「随時予約・抽選申込」を選択し、「空き状況を検索」画面移動する
-            #( driver, mouse ) = go_to_datesearch(driver, mouse, cfg, logger=logger)
             # 希望日+希望時間帯+希望コートのリストから検索条件を取得する
             for _date in user_target_reserves_list:
                 # 既存予約件数が最大予約件数を超えていたら終了する
