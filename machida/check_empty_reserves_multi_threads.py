@@ -32,9 +32,6 @@ import threading
 
 ## カレンダー関連
 from time import sleep
-import math
-import datetime
-import calendar
 import time
 
 ## ファイルIO、ディレクトリ関連
@@ -46,7 +43,6 @@ import re
 
 ## JSON関連
 import json
-import pprint
 
 # URLの'/'が問題になるためハッシュ化する
 from hashlib import md5
@@ -102,7 +98,7 @@ def setup_driver():
     driver = webdriver.Chrome(service=chrome_service, options=options)
     #driver.set_window_size('800', '600')
     mouse = webdriver.ActionChains(driver)
-    return driver , mouse
+    return driver, mouse
 
 ## cookieおよび_ncformingoを取得する
 @reserve_tools.elapsed_time
@@ -117,17 +113,17 @@ def selenium_get_cookie_and_html(driver, cfg, logger=None):
     # トップページにアクセスする
     response = driver.get(cfg['top_url'])
     http_req_num += 1
-    cookies = driver.get_cookies()
+    #cookies = driver.get_cookies()
     # logger.debug(f'Top cookies:')
     # logger.debug((json.dumps(cookies, indent=2)))
-    sleep(1)
+    #sleep(1)
     # メニューページにアクセスする
     response = driver.get(cfg['first_url'])
-    cookies = driver.get_cookies()
+    #cookies = driver.get_cookies()
     # logger.debug(f'First URL cookies:')
     # logger.debug((json.dumps(cookies, indent=2)))
     http_req_num += 1
-    sleep(1)
+    #sleep(1)
     #cookies = driver.get_cookies()
     # デバック用
     _html = driver.page_source
@@ -136,7 +132,7 @@ def selenium_get_cookie_and_html(driver, cfg, logger=None):
     # 空き予約検索ページにアクセスする
     response = driver.get(cfg['second_url'])
     http_req_num += 1
-    cookies = driver.get_cookies()
+    #cookies = driver.get_cookies()
     # デバック用
     _html = driver.page_source
     with open('Wp_TopMenu.html', mode='w', encoding='utf-8', errors='ignore') as f:
@@ -210,47 +206,86 @@ def selenium_input_datas(driver, input_date, logger=None):
     """
     検索条件を入力し、空き予約を検索し、検索結果を取得する
     """
+    # 待機時間を設定する
+    wait = WebDriverWait(driver, 10, 2)
     global http_req_num
     # selectタイプの指定値
     SSDaiClass = '01' # スポーツ施設
     SSClass = '06' # テニスコート
     Term = '1日'
     Time = '全日'
+    # 日付データを変換する
+    _input_date = input_date[:4] + '/' + input_date[4:6] + '/' + input_date[6:]
+    logger.debug(f'input_date: {_input_date}')
     # DOM上に表示されるまで待機する
+    wait.until(EC.presence_of_all_elements_located)
     # 検索フォームのフィールド設定
-    wait = WebDriverWait(driver, 10, 2)
     # 施設の分類
     f_SSDaiClass = wait.until(EC.presence_of_element_located((By.ID, "wpManager_gwppnlLeftZone_cmbSSDaiClass")))
-    Select(f_SSDaiClass).select_by_value(f'{SSDaiClass}')
+    f_SSDaiClass = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_cmbSSDaiClass")))
+    f_SSDaiClass.click()
+    try:
+        Select(f_SSDaiClass).select_by_value(f'{SSDaiClass}')
+    except exceptions.StaleElementReferenceException:
+        f_SSDaiClass = wait.until(EC.presence_of_element_located((By.NAME, "SSDaiClass")))
+        Select(f_SSDaiClass).select_by_value(f'{SSDaiClass}')
+    except:
+        pass
     # 施設の種類
     f_SSClass = wait.until(EC.presence_of_element_located((By.ID, "wpManager_gwppnlLeftZone_cmbSSClass")))
-    Select(f_SSClass).select_by_value(f'{SSClass}')
+    f_SSClass = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_cmbSSClass")))
+    f_SSClass.click()
+    try:
+        Select(f_SSClass).select_by_value(f'{SSClass}')
+    except exceptions.StaleElementReferenceException:
+        f_SSClass = wait.until(EC.presence_of_element_located((By.NAME, "SSClass")))
+        Select(f_SSClass).select_by_value(f'{SSClass}')
+    except:
+        pass
     # 開始日
     f_Date = wait.until(EC.presence_of_element_located((By.ID, "wpManager_gwppnlLeftZone_ucTermSettings_txtDateFrom")))
     # 開始日フィールドに入力されている値をクリアする
     f_Date.clear()
     # 開始日フィールドに指定日を入力する
-    f_Date.send_keys(str(input_date))
+    f_Date.send_keys(str(_input_date))
     # 期間
     f_Term = wait.until(EC.presence_of_element_located((By.ID, "wpManager_gwppnlLeftZone_ucTermSettings_cmbTerm")))
-    Select(f_Term).select_by_value(f'{Term}')
+    f_Term = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_ucTermSettings_cmbTerm")))
+    f_Term.click()
+    try:
+        Select(f_Term).select_by_value(f'{Term}')
+    except exceptions.StaleElementReferenceException:
+        f_Term = wait.until(EC.presence_of_element_located((By.NAME, "wpManager_gwppnlLeftZone_ucTermSettings_cmbTerm")))
+        Select(f_Term).select_by_value(f'{Term}')
+    except:
+        pass
     # 時間帯
     f_Time = wait.until(EC.presence_of_element_located((By.ID, "wpManager_gwppnlLeftZone_ucTermSettings_cmbTime")))
-    Select(f_Term).select_by_value(f'{Time}')
-    f_shisetsu = wait.until(EC.presence_of_element_located((By.ID, "shisetsu")))
+    f_Time = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_ucTermSettings_cmbTime")))
+    f_Time.click()
+    try:
+        Select(f_Time).select_by_value(f'{Time}')
+    except exceptions.StaleElementReferenceException:
+        f_Time = wait.until(EC.presence_of_element_located((By.NAME, "wpManager_gwppnlLeftZone_ucTermSettings_cmbTime")))
+        Select(f_Time).select_by_value(f'{Time}')
+    except:
+        pass
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 「空き照会>>」ボタンをクリックする
-    driver.find_element(By.XPATH, ".//input[@type='button'][@value='検索する'][@class='btnSearch js_recaptcha_submit']").click()
+    driver.find_element(By.ID, "wpManager_gwppnlLeftZone_btnShoukai").click()
     #sleep(30)
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
-    sleep(1)
+    #sleep(1)
     # 最下行までスクロールする
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     http_req_num += 1
-    # 画面のtitleを確認する
-    #assert '空き状況を検索｜八王子市施設予約システム' in driver.title
+    # デバック用
+    _html = driver.page_source
+    reserve_filename = f'reserve_{input_date}.html'
+    with open(reserve_filename, mode='w', encoding='utf-8', errors='ignore') as f:
+        f.write(_html)
     return None
 
 # 指定した年月日のコート空き予約ページから空き予約の時間帯を取得する
@@ -311,6 +346,7 @@ def go_to_search_reserves_page(driver, logger=None):
     Returns:
         [type]: [description]
     """
+    global http_req_num
     # 待機時間を設定する
     wait = WebDriverWait(driver, 10, 2)
     # 検索ページがすべて表示されるまで待機する
@@ -318,11 +354,12 @@ def go_to_search_reserves_page(driver, logger=None):
     # 「メニューへ」ボタンをクリックする
     f_MenuBtn = wait.until(EC.element_to_be_clickable((By.ID, "ucPCFooter_btnToMenu")))
     f_MenuBtn.click()
+    http_req_num += 1
     # 空き予約検索ページに移動する
     sleep(1)
     # 「クリアー」ボタンを押して、検索条件をクリアーする
-    f_ClearBtn = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_btnClear")))
-    f_ClearBtn.click()
+    #f_ClearBtn = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_btnClear")))
+    #f_ClearBtn.click()
     # 
     return driver
 
