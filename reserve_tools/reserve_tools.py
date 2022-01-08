@@ -342,6 +342,36 @@ def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
     #logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
 
+# 予約希望日リストを同時実行数に応じて分割したリストを作成する
+def split_date_list_by_threads(cfg, date_list, logger=None):
+    """
+    予約希望日リストを同時実行数に応じて分割したリストを作成する
+
+    Args:
+        target_months_list ([List]): YYYYMMDDの日付のリスト
+        cfg ([Dict]): 設定ファイルのDictオブジェクト
+        logger ([Object], optional): ロギングオブジェクト. Defaults to None.
+
+    Returns:
+        [List]: ListのList型の日付のリスト
+    """
+    # スレッド数を取得する
+    threads_num = int(cfg['threads_num'])
+    # 日付リストの初期化。スレッド数に応じたリストのリストを作成する
+    split_date_list = []
+    for i in range(threads_num):
+        split_date_list.append([])
+    index = 0
+    for _date in date_list:
+        _index = index % threads_num
+        split_date_list[_index].append(_date)
+        index += 1
+    # 分割した日付リストを返す
+    logger.debug(f'split_date_list:')
+    logger.debug(json.dumps(split_date_list, indent=2))
+    #print(json.dumps(request_objs, indent=2))
+    return split_date_list
+
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
 def get_weekday_from_datestring(datestring):
     """
