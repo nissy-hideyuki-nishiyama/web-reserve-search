@@ -304,21 +304,6 @@ def get_empty_court_time(cfg, threadsafe_list, date, html, logger=None):
                         if str(_facility_name) not in cfg['exclude_courts']:
                             # 昇順で表示させるため時間帯がひと桁のものを0で埋める
                             _time[_rev_index] = reserve_tools.time_zfill2(_time[_rev_index], '～')
-                            # if len(str(_time[_rev_index])) < 11:
-                            #     #開始時刻と終了時刻に分割する
-                            #     _start_time = re.split('～', str(_time[_rev_index]))[0]
-                            #     _end_time = re.split('～', str(_time[_rev_index]))[1]
-                            #     # 5文字以下なら処理をする
-                            #     if len(str(_start_time)) < 5:
-                            #         _hour = re.split(':', str(_start_time))[0]
-                            #         _min = re.split(':', str(_start_time))[1]
-                            #         _start_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
-                            #     if len(str(_end_time)) < 5:
-                            #         _hour = re.split(':', str(_end_time))[0]
-                            #         _min = re.split(':', str(_end_time))[1]
-                            #         _end_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
-                            #     _time[_rev_index] = str(_start_time) + '～' + str(_end_time)
-                            #logger.debug(f'{_date} {_time[_rev_index]} {_facility_name} {_court_name}')
                             threadsafe_list.add_reserves(date, f'{_time[_rev_index]}', f'{_facility_name} {_court_name}', logger=logger)
                 _rev_index += 1
     #logger.debug(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
