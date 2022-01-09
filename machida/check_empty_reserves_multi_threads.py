@@ -78,7 +78,7 @@ class ThreadSafeReservesList:
 def setup_driver():
     """
     seleniumを初期化する
-    デバッグ時にはChromeの動作を目視確認するために、options.add_argument行をコメントアウトする。
+    デバッグ時にはChromeの動作を目視確認するために、options.binary_location = '/usr/bin/chromium-browser'行をコメントアウトする。
     ヘッドレスモードを利用する場合は、options.add_argument行のコメントアウトを外す。
     """
     # WEB request header
@@ -104,29 +104,24 @@ def setup_driver():
 @reserve_tools.elapsed_time
 def selenium_get_cookie_and_html(driver, cfg, logger=None):
     """
-    selenuimuで接続する
-    cookieおよび_ncforminfoの値を取得する
-    トップページにアクセスし、これらを取得する
+    selenuimuで接続して、スレッド毎にcookieを取得する
     """
     global http_req_num
     wait = WebDriverWait(driver, 10, 2)
-    # トップページにアクセスする
+    # トップページにアクセスする。必要なくなったのでコメントアウトする。
+    # トップページでもcookieを発行している
     #response = driver.get(cfg['top_url'])
     #http_req_num += 1
     # メニューページにアクセスする
     response = driver.get(cfg['first_url'])
     http_req_num += 1
-    # デバック用
-    # _html = driver.page_source
-    # with open('dselect.html', mode='w', encoding='utf-8', errors='ignore') as f:
-    #     f.write(_html)
+    # デバッグ用にHTMLファイルを保存する
+    #reserve_tools.save_result_html(response.page_source, f'dselect.html')
     # 空き予約検索ページにアクセスする
     response = driver.get(cfg['second_url'])
     http_req_num += 1
-    # デバック用
-    # _html = driver.page_source
-    # with open('Wp_TopMenu.html', mode='w', encoding='utf-8', errors='ignore') as f:
-    #     f.write(_html)
+    # デバッグ用にHTMLファイルを保存する
+    #reserve_tools.save_result_html(response.page_source, f'dselect.html')
     elment = wait.until(EC.presence_of_all_elements_located)
     return driver
 
@@ -193,6 +188,7 @@ def selenium_input_datas(driver, input_date, logger=None):
     # 検索フォームのフィールド設定
     # 施設の分類
     f_SSDaiClass = wait.until(EC.presence_of_element_located((By.ID, "wpManager_gwppnlLeftZone_cmbSSDaiClass")))
+    # セレクトフィールドの値がうまく取れないため、クリックできることを確認の上、try & except で対応する。他のも同様
     f_SSDaiClass = wait.until(EC.element_to_be_clickable((By.ID, "wpManager_gwppnlLeftZone_cmbSSDaiClass")))
     f_SSDaiClass.click()
     try:
@@ -308,29 +304,6 @@ def get_empty_court_time(cfg, threadsafe_list, date, html, logger=None):
                 _rev_index += 1
     #logger.debug(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
     return None
-
-# 時間帯の文字列を2桁の0で埋める
-def time_zfill(_time, split_string):
-    """
-    h:m～h:mの時間帯の文字列を時間、分とも2桁に変換する
-    """
-    # 昇順で表示させるため時間帯がひと桁のものを0で埋める。11文字以下なら処理をする
-    if len(str(_time)) < 11:
-        #開始時刻と終了時刻に分割する
-        _start_time = re.split(split_string, str(_time))[0]
-        _end_time = re.split(split_string, str(_time))[1]
-        # 5文字以下なら処理をする
-        if len(str(_start_time)) < 5:
-            _hour = re.split(':', str(_start_time))[0]
-            _min = re.split(':', str(_start_time))[1]
-            _start_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
-        if len(str(_end_time)) < 5:
-            _hour = re.split(':', str(_end_time))[0]
-            _min = re.split(':', str(_end_time))[1]
-            _end_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
-        print(f'{_start_time}{split_string}{_end_time}')
-        #_str_time = str(_start_time) + f'{split_string}' + str(_end_time)
-    return f'{_start_time}{split_string}{_end_time}'
 
 # メニューボタンで空き予約検索ページに戻る
 def go_to_search_reserves_page(driver, logger=None):
@@ -449,11 +422,8 @@ def postproc_search_empty_reserves(cfg, threadsafe_list, logger=None):
     """
     空き予約リストを整形して、LINEに通知する
     """
-    # (選択２)空き予約検索結果ページの解析と空き予約結果リストへの登録
-    # 空き予約結果リストを昇順にソートする
     # 空き予約結果リストの通知メッセージ文の作成
     # 空き予約結果リストのLINE通知
-    # LINEにメッセージを送信する
     # 送信メッセージリストの初期化
     message_bodies = []
     ## メッセージ本体を作成する
@@ -466,7 +436,7 @@ if __name__ == '__main__':
     # 実行時間を測定する
     _start = time.time()
     # 事前準備
-    ( cfg, logger, date_list ) = prepare_serch_empty_reserves(cfg_filename="cfg_for_test.json")
+    ( cfg, logger, date_list ) = prepare_serch_empty_reserves(cfg_filename="cfg.json")
     logger.info(f'starting to search empty reserve.')
     # 同時実行数
     threads = cfg['threads_num']
