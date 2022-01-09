@@ -11,6 +11,9 @@ from dateutil.relativedelta import relativedelta
 import os
 import sys
 
+# 正規表現
+import re
+
 ## JSON関連
 import json
 
@@ -128,6 +131,12 @@ def save_html_to_filename(response, filename):
 
 # aiohttp.requestsメソッドのレスポンスをHTMLファイルを保存する
 def save_html_to_filename_for_aiohttp(response, filename):
+    print(f'save html file: {filename}')
+    with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
+        f.write(response)
+
+# selenium(chrome)のレスポンスをHTMLファイルを保存する
+def save_result_html(response, filename):
     print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(response)
@@ -341,6 +350,36 @@ def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
             want_date_list.append(_date)
     #logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
+
+# 予約希望日リストを同時実行数に応じて分割したリストを作成する
+def split_date_list_by_threads(cfg, date_list, logger=None):
+    """
+    予約希望日リストを同時実行数に応じて分割したリストを作成する
+
+    Args:
+        target_months_list ([List]): YYYYMMDDの日付のリスト
+        cfg ([Dict]): 設定ファイルのDictオブジェクト
+        logger ([Object], optional): ロギングオブジェクト. Defaults to None.
+
+    Returns:
+        [List]: ListのList型の日付のリスト
+    """
+    # スレッド数を取得する
+    threads_num = int(cfg['threads_num'])
+    # 日付リストの初期化。スレッド数に応じたリストのリストを作成する
+    split_date_list = []
+    for i in range(threads_num):
+        split_date_list.append([])
+    index = 0
+    for _date in date_list:
+        _index = index % threads_num
+        split_date_list[_index].append(_date)
+        index += 1
+    # 分割した日付リストを返す
+    logger.debug(f'split_date_list:')
+    logger.debug(json.dumps(split_date_list, indent=2))
+    #print(json.dumps(request_objs, indent=2))
+    return split_date_list
 
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
 def get_weekday_from_datestring(datestring):
@@ -595,6 +634,28 @@ def create_user_target_reserves_list(target_reserves_list, user_reserved_list, l
     logger.debug(f'user_target_reserves_list:')
     logger.debug(json.dumps(user_target_reserves_list, indent=2, ensure_ascii=False))
     return user_target_reserves_list
+
+# 時間帯の文字列を2桁の0で埋める
+def time_zfill2(_time, split_string):
+    """
+    h:m～h:mの時間帯の文字列を時間、分とも2桁に変換する
+    """
+    # 昇順で表示させるため時間帯がひと桁のものを0で埋める。11文字以下なら処理をする
+    if len(str(_time)) < 11:
+        #開始時刻と終了時刻に分割する
+        _start_time = re.split(split_string, str(_time))[0]
+        _end_time = re.split(split_string, str(_time))[1]
+        # 5文字以下なら処理をする
+        if len(str(_start_time)) < 5:
+            _hour = re.split(':', str(_start_time))[0]
+            _min = re.split(':', str(_start_time))[1]
+            _start_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
+        if len(str(_end_time)) < 5:
+            _hour = re.split(':', str(_end_time))[0]
+            _min = re.split(':', str(_end_time))[1]
+            _end_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
+        _time= str(_start_time) + '～' + str(_end_time)
+    return _time
 
 # 東京都多摩市向け
 # 年月日(YYYYMMDD)の入力リストを作成する
