@@ -388,7 +388,7 @@ def prepare_serch_empty_reserves(cfg_filename="cfg.json"):
     ## 検索対象月を取得する
     target_months_list = reserve_tools.create_month_list(cfg, logger=logger)
     ## 検索対象月リストと祝日リストから検索対象年月日リストを作成する
-    date_list = reserve_tools.create_want_date_list(target_months_list, public_holiday, cfg)
+    date_list = reserve_tools.create_date_list_machida(target_months_list, public_holiday, cfg, logger=logger)
     logger.debug(f'date_list: {date_list}')
     return cfg, logger, date_list
 

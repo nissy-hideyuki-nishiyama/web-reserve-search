@@ -160,6 +160,7 @@ def check_new_year(month):
         year = _this_year
     #print(f'Year: {year}')
     return year
+
 # 検索対象月のリストを作成する
 def create_month_list(cfg, logger=None):
     """
@@ -844,6 +845,63 @@ def create_target_reserves_list_hachioji(reserves_list, want_date_list, want_hou
     # 希望日+希望時間帯のリストを返す
     #logger.debug(f'{target_reserves_list}')
     return target_reserves_list
+
+# 東京都町田市向け
+# 検索対象日リストを作成する。希望日を追加、除外日を除外した日付リストを作成する
+def create_date_list_machida(target_months_list, public_holiday, cfg, logger=None):
+    """
+    検索対象日リストを作成する
+    プログラム実行日から1か月先までの日付リストを作成する
+
+    Args:
+        target_months_list ([List]): 検索対象月の月リスト[description]
+        public_holiday ([Dict]): 祝日のDict[description]
+        cfg ([Dict]): 設定ファイル
+        logger ([Obj], optional): ロギングオブジェクト. Defaults to None.
+
+    Returns:
+        [List]: 検索対象日(YYYYMMDD)のリスト
+    """
+    # 
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 除外日リストを取得する
+    exclude_days = []
+    exclude_month_days_dict = cfg['exclude_month_days']
+    # 対象月リストから月を取得し、月毎の除外日リストを追加する
+    for _month in target_months_list:
+        # 除外日Dictから除外日のリストを取得する
+        # 除外日のリストがあるか確認する。空なら次の月に進む
+        if exclude_month_days_dict[str(_month)] == False:
+            continue
+        for _exclude_month_day in exclude_month_days_dict[str(_month)]:
+            _str_year = str(check_new_year(_month))
+            _str_month = str(_month).zfill(2)
+            _str_day = str(_exclude_month_day).zfill(2)
+            _str_date = _str_year + _str_month + _str_day
+            exclude_days.append(_str_date)
+    #logger.debug(f'exlude_days: {exclude_days}')
+    # 除外日も含めた検索対象日リストを作成する
+    # 多摩市向けの create_date_list を使う
+    _date_list_with_exclude = create_date_list(target_months_list, public_holiday, cfg)
+    #logger.debug(f'date_list_with_exclude_days: {_date_list_with_exclude}')
+    # 今日の日付を計算する
+    _now = datetime.datetime.now(JST)
+    # 翌月の日付を計算する
+    _one_month_after = _now + relativedelta(months=1)
+    #logger.debug(f'one_month_after: {_one_month_after}')
+    # 検索対象日のリストを作成する
+    date_list = []
+    for _str_date in _date_list_with_exclude:
+        # 文字列からtimeオブジェクトに変換して、タイムゾーン情報を付与する
+        _date = datetime.datetime.strptime(_str_date, '%Y%m%d').replace(tzinfo=datetime.timezone(datetime.timedelta(hours=9)))
+        #logger.debug(f'date: {_date}')
+        # 除外日リストに入っていないことを確認する
+        if _str_date not in exclude_days:
+            # 翌月の日付以前かを確認する
+            if _date <= _one_month_after:
+                date_list.append(_str_date)
+    return date_list
 
 # LINEに空き予約を送信する
 ## メッセージ本文の作成
