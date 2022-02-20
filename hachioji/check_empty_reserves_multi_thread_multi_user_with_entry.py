@@ -820,7 +820,7 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
         ## IDとパスワードを取得する
         for _userid, _credential in _type_list.items():
             # ユーザー毎の予約確定件数を初期化する
-            user_reserverd_num = 0
+            user_reserved_num = 0
             user_reserved_num_at_onetime = 0
             # 予約できた件数が1回の最大予約件数を超えていたら終了する
             if whole_reserved_num >= max_whole_reserved_num:
