@@ -311,7 +311,7 @@ def create_want_day_list(month, public_holiday, cfg):
     for _wday in selected_weekdays:
         _day = _wday - first_weekday + 1
         while _day <= last_day:
-            if _day > _ref_day:
+            if _day >= _ref_day:
                 day_list.append(_day)
             _day += 7
     # 祝日の日をリストに追加する
