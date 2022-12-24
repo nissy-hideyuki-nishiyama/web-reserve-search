@@ -311,7 +311,7 @@ def create_want_day_list(month, public_holiday, cfg):
     for _wday in selected_weekdays:
         _day = _wday - first_weekday + 1
         while _day <= last_day:
-            if _day > _ref_day:
+            if _day >= _ref_day:
                 day_list.append(_day)
             _day += 7
     # 祝日の日をリストに追加する
@@ -336,7 +336,7 @@ def create_want_day_list(month, public_holiday, cfg):
             # 予約希望除外日リストが存在した場合、削除する
             if _exclude_day in target_days:
                 target_days.remove(int(_exclude_day))
-    print(target_days)
+    #print(target_days)
     return target_days
 
 # 予約希望日リストを作成する
