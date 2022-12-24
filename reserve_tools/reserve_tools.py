@@ -336,7 +336,7 @@ def create_want_day_list(month, public_holiday, cfg):
             # 予約希望除外日リストが存在した場合、削除する
             if _exclude_day in target_days:
                 target_days.remove(int(_exclude_day))
-    print(target_days)
+    #print(target_days)
     return target_days
 
 # 予約希望日リストを作成する
