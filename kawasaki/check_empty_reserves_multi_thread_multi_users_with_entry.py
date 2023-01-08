@@ -822,23 +822,23 @@ def do_reserves_from_datesearch(cfg, cookies, form_data, date, time, logger=None
     #_file_name = f'result_cart_reserve_{_datetime_string}.html'
     #reserve_tools.save_html_to_filename(cart_response, _file_name)
     # 予約カートのフォームを取得する
-    cart_form_data = get_formdata_rsvCartList(cart_response)
+    ( cart_form_data, _url ) = get_formdata_rsvCartList(cart_response)
     # 「予約確定の手続きへ」ボタンをクリックして、予約確定の手続きをする
     reserve_response = doing_reserve(cfg, cookies, headers, cart_form_data)
     # デバッグ用としてhtmlファイルとして保存する
     #_file_name = f'result_do_reserve_{_datetime_string}.html'
     #reserve_tools.save_html_to_filename(reserve_response, _file_name)
     # 予約施設の確認内容のフォームデータを取得する
-    reserve_form_data = get_formdata_rsvCartDetails(reserve_response)
+    ( reserve_form_data, _url ) = get_formdata_rsvCartDetails(reserve_response)
     # 「予約内容を確認する」ボタンをクリックする
-    input_response = input_reserve(cfg, cookies, headers, reserve_form_data)
+    input_response = input_reserve(cfg, cookies, headers, reserve_form_data, _url)
     # デバッグ用としてhtmlファイルとして保存する
     #_file_name = f'result_input_reserve_{_datetime_string}.html'
     #reserve_tools.save_html_to_filename(input_response, _file_name)
     # フォームデータを取得する
-    confirm_form_data = get_formdata_rsvCartInputDetailsConfirm(input_response)
-    # 「予約確定」ボタンをクリックする
-    confirm_response = confirm_reserve(cfg, cookies, headers, confirm_form_data)
+    ( confirm_form_data, _url ) = get_formdata_rsvCartInputDetailsConfirm(input_response)
+    # 「予約を確定する」ボタンをクリックする
+    confirm_response = confirm_reserve(cfg, cookies, headers, confirm_form_data, _url)
     # デバッグ用としてhtmlファイルとして保存する
     #_file_name = f'result_confirm_reserve_{_datetime_string}.html'
     #reserve_tools.save_html_to_filename(confirm_response, _file_name)
@@ -1075,7 +1075,7 @@ def get_formdata_common(response, form_number):
     _form_data['te-conditions'] = _te_value.group()[7:-1]
     # フォームデータを返す
     #print(json.dumps(_form_data, indent=2, ensure_ascii=False))
-    return _form_data
+    return ( _form_data, response.url )
 
 ## 予約カートのフォームデータを取得する
 def get_formdata_rsvCartList(response):
@@ -1085,11 +1085,11 @@ def get_formdata_rsvCartList(response):
     # 予約カートのフォームデータは4番目
     _form_number = 3
     # フォームデータを取得する
-    _form_data = get_formdata_common(response, _form_number)
+    ( _form_data, _response_url ) = get_formdata_common(response, _form_number)
     # フォームデータを返す
-    return _form_data
+    return ( _form_data, _response_url )
 
-## 予約内容の手続きをする
+## 予約確定の手続きをする
 @reserve_tools.elapsed_time
 def doing_reserve(cfg, cookies, headers, form_data):
     """
@@ -1102,7 +1102,7 @@ def doing_reserve(cfg, cookies, headers, form_data):
         del form_data['layoutChildBody:childForm:inputDetailsItems:0:doCancel']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
-    # フォームデータを使って、カートに予約を追加する
+    # フォームデータを使って、「予約確定の手続きへ」ボタンをクリックする
     response = requests.post(cfg['cartlist_url'], headers=headers, cookies=cookies, data=params)
     http_req_num += 1
     # レスポンスを返す
@@ -1116,13 +1116,13 @@ def get_formdata_rsvCartDetails(response):
     # 予約施設の確認内容のフォームデータは2番目
     _form_number = 1
     # フォームデータを取得する
-    _form_data = get_formdata_common(response, _form_number)
+    ( _form_data, _response_url )  = get_formdata_common(response, _form_number)
     # フォームデータを返す
-    return _form_data
+    return ( _form_data, _response_url ) 
 
 ## 予約内容を入力して、「予約内容を確認する」ボタンをクリックして、予約結果を表示する
 @reserve_tools.elapsed_time
-def input_reserve(cfg, cookies, headers, form_data):
+def input_reserve(cfg, cookies, headers, form_data, url):
     """
     予約内容を入力して、「予約内容を確認する」ボタンをクリックして、予約結果を表示する
     予約内容: 利用目的、目的の詳細、利用人数
@@ -1131,20 +1131,24 @@ def input_reserve(cfg, cookies, headers, form_data):
     # 利用目的、目的の詳細、利用人数を入力する
     form_data['layoutChildBody:childForm:inputDetailsItems:0:purpose'] = cfg['selected_purpose']
     form_data['layoutChildBody:childForm:inputDetailsItems:0:purposeDetails'] = 'テニス'
+    form_data['layoutChildBody:childForm:inputDetailsItems:0:gname'] = 'テニスグループ'
     form_data['layoutChildBody:childForm:inputDetailsItems:0:useCnt'] = '4'
+    form_data['layoutChildBody:childForm:doConfirm'] = '送信'
     # 不要なフォームデータを削除する
     ## 取り消しボタンの値を削除する
     if 'layoutChildBody:childForm:inputDetailsItems:0:doCancel' in form_data:
         del form_data['layoutChildBody:childForm:inputDetailsItems:0:doCancel']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
-    # フォームデータを使って、カートに予約を追加する
+    # ヘッダーのRefererを一部を書き換える
+    headers['Referer'] = url
+    # フォームデータを使って、「予約内容を確認する」ボタンをクリックする
     response = requests.post(cfg['cartdetails_url'], headers=headers, cookies=cookies, data=params)
     http_req_num += 1
     # レスポンスを返す
     return response
 
-## 予約結果の最終確認ページのフォームデータを取得する
+## 予約施設の確認内容のフォームデータを取得する
 def get_formdata_rsvCartInputDetailsConfirm(response):
     """
     予約結果の最終確認ページのフォームデータを取得する
@@ -1152,16 +1156,15 @@ def get_formdata_rsvCartInputDetailsConfirm(response):
     # 予約結果の最終確認ページのフォームデータは2番目
     _form_number = 1
     # フォームデータを取得する
-    _form_data = get_formdata_common(response, _form_number)
+    ( _form_data, _response_url ) = get_formdata_common(response, _form_number)
     # フォームデータを返す
-    return _form_data
+    return ( _form_data, _response_url )
 
-## 予約結果を確定するため、「予約の確定をする」ボタンをクリックして、予約番号ページを表示する
+## 予約結果を確定するため、「予約を確定する」ボタンをクリックして、予約番号ページを表示する
 @reserve_tools.elapsed_time
-def confirm_reserve(cfg, cookies, headers, form_data):
+def confirm_reserve(cfg, cookies, headers, form_data, url):
     """
-    予約内容を入力して、「予約内容を確認する」ボタンをクリックして、予約結果を表示する
-    予約内容: 利用目的、目的の詳細、利用人数
+    予約施設の確認内容を表示して、「予約を確定する」ボタンをクリックして、予約確定する
     """
     global http_req_num
     # 不要なフォームデータを削除する
@@ -1173,8 +1176,8 @@ def confirm_reserve(cfg, cookies, headers, form_data):
         del form_data['layoutChildBody:childForm:doDetails']
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
-    # フォームデータを使って、カートに予約を追加する
-    response = requests.post(cfg['cartconfirm_url'], headers=headers, cookies=cookies, data=params)
+    # フォームデータを使って、予約を確定する
+    response = requests.post(url, headers=headers, cookies=cookies, data=params)
     http_req_num += 1
     # レスポンスを返す
     return response
