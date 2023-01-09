@@ -2,8 +2,8 @@
 set -xeu
 
 # 定数
-Root_Work_Dir=/home/hnishi/workdir/webscribe
-Work_Dir=${Root_Work_Dir}/selenium_layer
+Root_Work_Dir=/home/hnishi/workdir/web-reserve-search
+Work_Dir=${Root_Work_Dir}/lambda_layer/selenium_layer
 Zip_Filename=selenium_layer.zip
 Region=ap-northeast-1
 Profile=default
@@ -26,7 +26,7 @@ rm -rf python ${Zip_Filename}
 # 多摩市のrequirements.txtから必要なpipパッケージをダウンロードする
 echo "Get requirements.txt and create library zip."
 mkdir -p ${Work_Dir}/python
-pip3 install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/tama/requirements.txt 
+pip3.8 install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/tama/requirements.txt --use-pep517
 
 # zipファイルを作成する
 zip -ry ${Zip_Filename} ./python

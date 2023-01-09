@@ -66,6 +66,7 @@
 - cookie_utmz: 同上
 - cookie_utmc: 同上
 - cookie_utma: 同上
+- exclude_want_month_days: 予約処理から除外したい日付を記述する。月毎のリスト形式で記述する
 - exclude_month_days: 空き予約コート検索から除外したい日付を記述する。月毎のリスト形式で記述する
 - exclude_courts: 空き予約コート検索から除外したいコート(一の宮公園)のコードを記述する。コードはコート名とコートのコードの対応ファイル(court_map.json)を参照のこと
 - exclude_times: 空き予約コート検索から除外したい時間帯を指定する
@@ -107,6 +108,20 @@
   "cookie_utmc": "__utmc",
   "cookie_utma": "__utma",
   "institution_list": {
+  },
+  "exclude_want_month_days": {
+      "1": [ 1, 2, 3 ],
+      "2": [],
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": [],
+      "7": [],
+      "8": [ ],
+      "9": [ ],
+      "10": [],
+      "11": [],
+      "12": [ 31 ]
   },
   "exclude_month_days": {
     "1": [],

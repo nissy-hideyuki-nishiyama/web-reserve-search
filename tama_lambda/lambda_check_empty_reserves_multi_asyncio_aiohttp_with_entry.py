@@ -6,7 +6,7 @@
 # モジュールの読み込み
 ## HTMLクローラー関連
 from asyncio.locks import Semaphore
-from aiohttp.client import request
+#from aiohttp.client import request
 from requests.exceptions import (
     Timeout,
     RequestException,
@@ -39,8 +39,11 @@ import json
 import asyncio
 import aiohttp
 import async_timeout
-from aiohttp import ClientError
-
+from aiohttp import (
+    ClientSession,
+    TCPConnector,
+    ClientError
+)
 # URLの'/'が問題になるためハッシュ化する
 from hashlib import md5
 from pathlib import Path
@@ -326,7 +329,7 @@ async def get_request_courts(request_objs, coro, limit):
     global http_req_num
     tasks = []
     semaphore = asyncio.Semaphore(limit)
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+    async with ClientSession(connector=TCPConnector(ssl=False)) as session:
         for req_obj in request_objs:
             http_req_num += 1
             task = asyncio.ensure_future(bound_get_request_fetch(semaphore, session, coro, req_obj))
@@ -347,7 +350,7 @@ async def get_request_time(cfg, cookies, court_link_list, coro, limit=1):
     # リファレンスヘッダーを定義する。これがないと検索できない
     headers_court = { 'Referer': cfg['court_search_url'] }
     semaphore = asyncio.Semaphore(limit)
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
+    async with ClientSession(connector=TCPConnector(ssl=False)) as session:
         for _day, _link_list in court_link_list.items():
             for _link in _link_list:
                 search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', _link)
