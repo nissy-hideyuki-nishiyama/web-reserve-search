@@ -2,7 +2,7 @@
   "name": "webscribe-tama",
   "description": "webscribe tama search empty reserver",
   "region": "ap-northeast-1",
-  "runtime": "python3.7",
+  "runtime": "python3.8",
   "handler": "lambda_check_empty_reserves_multi_asyncio_aiohttp_with_entry.lambda_handler",
   "role": "arn:aws:iam::500421251886:role/webscribe-lambda-role",
   "timeout": 120,

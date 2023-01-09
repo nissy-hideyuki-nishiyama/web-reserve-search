@@ -301,20 +301,17 @@ def create_want_day_list(month, public_holiday, cfg):
     after_month = after_date.month
     after_day = after_date.day
     # 月の処理
-    # X日後の月が指定月より大きい場合
-    if month < after_month:
-        return day_list
-    # X日後の月が指定月と同じ場合
-    elif month == after_month:
+    # X日後の月が指定月と同じ場合は、今日からX日後の日付(after_day)を_ref_dayとする
+    if month == after_month:
         _ref_day = after_day
-    # X日後の月が指定月より小さい場合
+    # X日後の月が翌月の場合は、対象月は空の日付リストを返す
     else:
-        _ref_day = 0
+        return day_list
     # 選択された曜日の日にちのリストを作成する
     for _wday in selected_weekdays:
         _day = _wday - first_weekday + 1
         while _day <= last_day:
-            if _day > _ref_day:
+            if _day >= _ref_day:
                 day_list.append(_day)
             _day += 7
     # 祝日の日をリストに追加する

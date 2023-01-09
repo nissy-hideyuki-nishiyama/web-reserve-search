@@ -11,6 +11,9 @@ from dateutil.relativedelta import relativedelta
 import os
 import sys
 
+# 正規表現
+import re
+
 ## JSON関連
 import json
 
@@ -132,6 +135,12 @@ def save_html_to_filename_for_aiohttp(response, filename):
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(response)
 
+# selenium(chrome)のレスポンスをHTMLファイルを保存する
+def save_result_html(response, filename):
+    print(f'save html file: {filename}')
+    with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
+        f.write(response)
+
 # 年越し処理
 def check_new_year(month):
     """
@@ -151,6 +160,7 @@ def check_new_year(month):
         year = _this_year
     #print(f'Year: {year}')
     return year
+
 # 検索対象月のリストを作成する
 def create_month_list(cfg, logger=None):
     """
@@ -214,6 +224,8 @@ def create_day_list(month, public_holiday, cfg):
     selected_weekdays = cfg['want_weekdays']
     # 祝日以外の希望日リストを作成する
     want_month_days = cfg['want_month_days'][str(month)]
+    # 検索除外日リストを作成する
+    exclude_month_days = cfg['exclude_month_days'][str(month)]
     # 年越し確認をする
     year = check_new_year(month)
     # 対象日を格納するリストを初期化する
@@ -252,6 +264,12 @@ def create_day_list(month, public_holiday, cfg):
                 day_list.append(_want_day)
     # 重複した年月日日時を取り除き、昇順でソートして日にちのリストを作る
     target_days = sorted(list(set(day_list)))
+    # 除外日をリストから削除する
+    if exclude_month_days:
+        for _exclude_day in exclude_month_days:
+            # 除外日リストが存在した場合、削除する
+            if _exclude_day in target_days:
+                target_days.remove(int(_exclude_day))
     #print(target_days)
     return target_days
 
@@ -267,8 +285,8 @@ def create_want_day_list(month, public_holiday, cfg):
     selected_weekdays = cfg['want_weekdays']
     # 祝日以外の希望日リストを作成する
     want_month_days = cfg['want_month_days'][str(month)]
-    # 除外日リストを作成する
-    exclude_month_days = cfg['exclude_month_days'][str(month)]
+    # 予約希望除外日リストを作成する
+    exclude_want_month_days = cfg['exclude_want_month_days'][str(month)]
     # 希望遅延日を取得する
     days_later = int(cfg['days_later'])
     # 年越し確認をする
@@ -283,20 +301,17 @@ def create_want_day_list(month, public_holiday, cfg):
     after_month = after_date.month
     after_day = after_date.day
     # 月の処理
-    # X日後の月が指定月より大きい場合
-    if month < after_month:
-        return day_list
-    # X日後の月が指定月と同じ場合
-    elif month == after_month:
+    # X日後の月が指定月と同じ場合は、今日からX日後の日付(after_day)を_ref_dayとする
+    if month == after_month:
         _ref_day = after_day
-    # X日後の月が指定月より小さい場合
+    # X日後の月が翌月の場合は、対象月は空の日付リストを返す
     else:
-        _ref_day = 0
+        return day_list
     # 選択された曜日の日にちのリストを作成する
     for _wday in selected_weekdays:
         _day = _wday - first_weekday + 1
         while _day <= last_day:
-            if _day > _ref_day:
+            if _day >= _ref_day:
                 day_list.append(_day)
             _day += 7
     # 祝日の日をリストに追加する
@@ -315,10 +330,10 @@ def create_want_day_list(month, public_holiday, cfg):
                 day_list.append(_want_day)
     # 重複した年月日日時を取り除き、昇順でソートして日にちのリストを作る
     target_days = sorted(list(set(day_list)))
-    # 除外日をリストから削除する
-    if exclude_month_days:
-        for _exclude_day in exclude_month_days:
-            # 除外日リストが存在した場合、削除する
+    # 予約希望除外日をリストから削除する
+    if exclude_want_month_days:
+        for _exclude_day in exclude_want_month_days:
+            # 予約希望除外日リストが存在した場合、削除する
             if _exclude_day in target_days:
                 target_days.remove(int(_exclude_day))
     #print(target_days)
@@ -339,8 +354,38 @@ def create_want_date_list(target_months_list, public_holiday, cfg, logger=None):
             # 文字列YYYYMMDDを作成する
             _date = str(_year) + str(_month).zfill(2) + str(_day).zfill(2)
             want_date_list.append(_date)
-    logger.info(f'want_date_list: {want_date_list}')
+    #logger.info(f'want_date_list: {want_date_list}')
     return want_date_list
+
+# 予約希望日リストを同時実行数に応じて分割したリストを作成する
+def split_date_list_by_threads(cfg, date_list, logger=None):
+    """
+    予約希望日リストを同時実行数に応じて分割したリストを作成する
+
+    Args:
+        target_months_list ([List]): YYYYMMDDの日付のリスト
+        cfg ([Dict]): 設定ファイルのDictオブジェクト
+        logger ([Object], optional): ロギングオブジェクト. Defaults to None.
+
+    Returns:
+        [List]: ListのList型の日付のリスト
+    """
+    # スレッド数を取得する
+    threads_num = int(cfg['threads_num'])
+    # 日付リストの初期化。スレッド数に応じたリストのリストを作成する
+    split_date_list = []
+    for i in range(threads_num):
+        split_date_list.append([])
+    index = 0
+    for _date in date_list:
+        _index = index % threads_num
+        split_date_list[_index].append(_date)
+        index += 1
+    # 分割した日付リストを返す
+    logger.debug(f'split_date_list:')
+    logger.debug(json.dumps(split_date_list, indent=2))
+    #print(json.dumps(request_objs, indent=2))
+    return split_date_list
 
 # 年月日(YYYYMMDD)から曜日を取得し、曜日を計算し、年月日と曜日を返す
 def get_weekday_from_datestring(datestring):
@@ -428,6 +473,195 @@ def create_target_reserves_list(reserves_list, want_date_list, want_hour_list, w
     # 希望日+希望時間帯のリストを返す
     #print(f'{target_reserves_list}')
     return target_reserves_list
+
+# 予約リストのdictから指定日の時間帯の最小値と最大値を取得する
+def get_min_and_max_time(reserves_list, date, split_string, logger=None):
+    """
+    予約リストのdictから指定日の時間帯の最小値と最大値を取得する
+    """
+    # 文字列を分割する文字を取得する
+    _split_string = str(split_string)
+    # 時間帯の最小値と最大値を初期化する
+    min_time = datetime.time(23, 59, 59) 
+    max_time = datetime.time(0, 0, 0)
+    # 予約リストのdictに指定日が存在しない場合は、Noneを返す
+    if date not in reserves_list:
+        #logger.debug(f'not found {date} in reserves_list')
+        #return datetime.time(0, 0, 0), datetime.time(23, 59, 59)
+        return None, None
+    else:
+        for _time in reserves_list[date]:
+            # 時間帯を開始時間と終了時間に分割する
+            ( start_time, end_time ) = get_start_and_end_time(_time, _split_string, logger=logger)
+            # 時間帯の最小値よりも開始時間が小さい場合は、時間帯の最小値を置換する
+            if start_time < min_time:
+                min_time = start_time
+            # 時間帯の最大値よりも終了時間が大きい場合は、時間帯の最大値を置換する
+            if end_time > max_time:
+                max_time = end_time
+            #logger.debug(f'min_time: {min_time} , max_time: {max_time}')
+    # 時間帯の最小値と最大値を返す
+    logger.debug(f'date( {date} ) final: min_time: {min_time} , max_time: {max_time}')
+    return min_time, max_time
+
+# 時間帯の文字列から開始時間と終了時間を取得する
+def get_start_and_end_time(time, split_string, logger=None):
+    """
+    時間帯の文字列から開始時間と終了時間を取得する
+    """
+    # 文字列を分割する文字を取得する
+    _split_string = str(split_string)
+    # 時間帯を開始時間と終了時間に分割する
+    start_time_string = time.split(f'{_split_string}')[0]
+    start_time_hour = int(start_time_string.split(':')[0])
+    start_time_min = int(start_time_string.split(':')[1])
+    end_time_string = time.split(f'{_split_string}')[1]
+    end_time_hour = int(end_time_string.split(':')[0])
+    end_time_min = int(end_time_string.split(':')[1])
+    start_time = datetime.time(start_time_hour, start_time_min, 0)
+    end_time = datetime.time(end_time_hour, end_time_min, 0)
+    logger.debug(f'start_time: {start_time}, end_time: {end_time}')
+    return start_time, end_time
+
+# 現在の時間帯(min_time, max_time)を開始時間(start_time)と終了時間(end_time)で条件を満たしていたら更新する
+def update_min_and_max_time(min_time, max_time, start_time, end_time, logger=None):
+    """[summary]
+    現在の時間帯(min_time, max_time)を開始時間(start_time)と終了時間(end_time)で条件を満たしていたら更新する
+    開始時間がmin_timeより小さい場合は開始時間をmin_timeとする
+    終了時間がmax_timeより大きい場合は終了時間をmax_timeとする
+    Args:
+        min_time ([Time]): 時間帯の最小時間
+        max_time ([Time]): 時間帯の最大時間
+        start_time ([Time]): 開始時間
+        end_time ([Time]): 終了時間
+        いずれも、datetimeモジュールのdatetime.timeオブジェクト
+
+    Returns:
+        min_time [Time]: 更新された時間帯の最小時間
+        max_time [Time]: 更新された時間帯の最大時間
+    """
+    # 時間帯の最小時間と開始時間を比較する。最小時間がNoneまたは開始時間が小さければ、最小時間を置き換える。
+    if min_time == None or start_time < min_time:
+        min_time = start_time
+    # 時間帯の最大時間と終了時間を比較する。最大時間がNoneまたは終了時間が大きれければ、最大時間を置き換える
+    if max_time == None or end_time > max_time:
+        max_time = end_time
+    # 時間帯の最小時間と最大時間を返す
+    logger.debug(f'updated min_time: {min_time}, max_time: {max_time}')
+    return min_time, max_time
+
+# ユーザー毎の希望予約リストを作成する
+# ユーザー毎既存予約済みリストと希望予約リストを比較し、既存予約済みリストと日時と時間帯の予約が重なっている場合はユーザー毎の希望予約リストに追加しない
+def create_user_target_reserves_list(target_reserves_list, user_reserved_list, logger=None):
+    """
+    ユーザー毎の希望予約リストを作成する
+    ユーザー毎既存予約済みリストと希望予約リストを比較し、既存予約済みリストと日付と時間帯の予約が重なっている場合はユーザー毎の希望予約リストに追加しない
+    """
+    # ユーザー毎希望予約リストを初期化する
+    user_target_reserves_list = {}
+    # ユーザー毎既存予約済みリスト
+    # 空き予約検索で見つけた希望予約リストを走査する
+    # 日付のキーを取得する
+    for _date, _time_dict in target_reserves_list.items():
+        # ユーザー毎既存予約済みリストの時間帯の最小値と最大値を取得する
+        ( min_time, max_time ) = get_min_and_max_time(user_reserved_list, _date, '～', logger=logger)
+        # 取得した日付がユーザー毎既存予約済みリストに存在するか確認する
+        if _date in user_reserved_list:
+            # 時間帯のキーを取得する
+            for _time, _court_list in _time_dict.items():
+                # 時間帯の文字列から開始時間と終了時間を取得する
+                ( start_time, end_time ) = get_start_and_end_time(_time, '～', logger=logger)
+                # 取得した時間帯がユーザー毎既存予約済みリストに存在するか確認する。存在したら次の時間帯の処理に進む
+                if _time in user_reserved_list[_date]:
+                    logger.debug(f'found reserve( {_date} {_time} ) in user_reserved_list')
+                    continue
+                else:
+                    # ユーザー毎希望予約リストにないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                    if _date not in user_target_reserves_list:
+                        # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                        # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                        if start_time >= max_time or end_time <= min_time :
+                            logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                            user_target_reserves_list[_date] = {}
+                            user_target_reserves_list[_date][_time] = _court_list
+                            # 次のキーの判定のために、min_timeとmax_timeを更新する
+                            ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+                    else:
+                        # 時間帯のキーがないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                        if _time not in user_target_reserves_list[_date]:
+                            # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する。
+                            # 重なっていると予約できないため。
+                            # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                            # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                            if start_time >= max_time or end_time <= min_time :
+                                logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                                user_target_reserves_list[_date][_time] = _court_list
+                                # 次のキーの判定のために、min_timeとmax_timeを更新する
+                                ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+        else:
+            # 時間帯のキーを取得する
+            for _time, _court_list in _time_dict.items():
+                # 時間帯の文字列から開始時間と終了時間を取得する
+                ( start_time, end_time ) = get_start_and_end_time(_time, '～', logger=logger)
+                # ユーザー毎希望予約リストにないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                if _date not in user_target_reserves_list:
+                    user_target_reserves_list[_date] = {}
+                    user_target_reserves_list[_date][_time] = _court_list
+                    # 次のキーの判定のために、min_timeとmax_timeを更新する
+                    ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+                else:
+                    # 日付のキーが存在したら、時間帯を確認する
+                    if _time in user_target_reserves_list[_date]:
+                        # ユーザー毎希望予約リストにその時間帯が存在していたら、次の時間帯の検索に移る
+                        continue
+                    else:
+                        # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                        # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                        if start_time >= max_time or end_time <= min_time :
+                            logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                            user_target_reserves_list[_date][_time] = _court_list
+                            # 次のキーの判定のために、min_timeとmax_timeを更新する
+                            ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+                    # for _utime in user_target_reserves_list[_date]:
+                    #     # 時間帯のキーがないか確認する。なければ、その予約をユーザー毎希望予約リストに追加する
+                    #     if _utime not in user_target_reserves_list[_date]:
+                    #         # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する。
+                    #         # 重なっていると予約できないため。
+                    #         # 時間帯の文字列から開始時間と終了時間を取得する
+                    #         ( start_time, end_time ) = get_start_and_end_time(_utime, '～', logger=logger)
+                    #         # ユーザー毎既存予約済みリストの時間帯の最小値と最大値の時間に重なっていないことを確認する
+                    #         # 開始時間、終了時間がかともに最小値と最大値の間にないことを確認する
+                    #         if start_time >= max_time or end_time <= min_time :
+                    #             logger.debug(f'regist reserve( {_date} {_time} ) to user_target_reserves_list')
+                    #             user_target_reserves_list[_date][_time] = _court_list[0]
+                    #             # 次のキーの判定のために、min_timeとmax_timeを更新する
+                    #             ( min_time, max_time ) = update_min_and_max_time(min_time, max_time, start_time, end_time, logger=logger)
+    # ユーザー毎希望予約リストを返す
+    logger.debug(f'user_target_reserves_list:')
+    logger.debug(json.dumps(user_target_reserves_list, indent=2, ensure_ascii=False))
+    return user_target_reserves_list
+
+# 時間帯の文字列を2桁の0で埋める
+def time_zfill2(_time, split_string):
+    """
+    h:m～h:mの時間帯の文字列を時間、分とも2桁に変換する
+    """
+    # 昇順で表示させるため時間帯がひと桁のものを0で埋める。11文字以下なら処理をする
+    if len(str(_time)) < 11:
+        #開始時刻と終了時刻に分割する
+        _start_time = re.split(split_string, str(_time))[0]
+        _end_time = re.split(split_string, str(_time))[1]
+        # 5文字以下なら処理をする
+        if len(str(_start_time)) < 5:
+            _hour = re.split(':', str(_start_time))[0]
+            _min = re.split(':', str(_start_time))[1]
+            _start_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
+        if len(str(_end_time)) < 5:
+            _hour = re.split(':', str(_end_time))[0]
+            _min = re.split(':', str(_end_time))[1]
+            _end_time = str(_hour).zfill(2) + ':' + str(_min).zfill(2)
+        _time= str(_start_time) + '～' + str(_end_time)
+    return _time
 
 # 東京都多摩市向け
 # 年月日(YYYYMMDD)の入力リストを作成する
@@ -561,6 +795,117 @@ def create_date_list_hachioji(target_months_list, public_holiday, cfg, logger=No
             _date = str(_year) + '/' + str(_month).zfill(2) + '/' + str(_day).zfill(2)
             date_list.append(_date)
     logger.debug(date_list)
+    return date_list
+
+## 空き予約リストを、希望日リスト、希望時間帯リスト、希望施設名リストより予約処理対象リスト(年月日:[時間帯]のdict型)を作成する
+def create_target_reserves_list_hachioji(reserves_list, want_date_list, want_hour_list, want_location_list, logger=None):
+    """
+    予約処理対象の希望日、希望時間帯のリストを作成する
+    """
+    # 希望日+希望時間帯のリストを初期化する
+    target_reserves_list = {}
+    # 空き予約リストから、空き予約日と値を取得する
+    for _date, _d_value in reserves_list.items():
+        # 空き予約日が希望日リストに含まれていない場合は次の空き予約日に進む
+        if _date not in want_date_list:
+            logger.debug(f'not want day: {_date}')
+            continue
+        # 空き予約時間帯とコートリストを取得する
+        for _time, _court_list in _d_value.items():
+            # 空き予約時間帯が希望時間帯リストに含まれていない場合は次の予約時間帯に進む
+            if _time not in want_hour_list:
+                logger.debug(f'not want hour: {_date} {_time}')
+                # 1日1件のみ予約取得したい場合は continueのコメントを削除する
+                #continue
+            # 空きコートが希望空きコートリストに含まれていない場合は次のコートに進む
+            for _court in _court_list:
+                # 空きコート名から、施設名とコート名に分割する
+                #_location_name = _court.split(' ')[0]
+                #_court_name = _court.split(' ')[1]
+                # 空き予約コートが希望施設名に含まれていない場合は次の空きコートに進む
+                if _court not in want_location_list:
+                    logger.debug(f'not want location: {_date} {_time} {_court}')
+                    continue
+                # 希望日+希望時間帯のリストに空き予約日がない場合は初期化後、時間帯を追加する
+                if _date not in target_reserves_list:
+                    target_reserves_list[_date] = {}
+                    target_reserves_list[_date][_time] = []
+                    target_reserves_list[_date][_time].append(_court)
+                    logger.debug(f'regist target reserves list: {_date} {_time} {_court}')
+                # ある場合は時間帯を追加する
+                else:
+                    # 同じ時間帯がない場合は時間帯は追加する
+                    if _time not in target_reserves_list[_date]:
+                        target_reserves_list[_date][_time] = []
+                        target_reserves_list[_date][_time].append(_court)
+                        logger.info(f'regist target reserves list: {_date} {_time} {_court}')
+                    else:
+                        # 次の時間帯に進む
+                        logger.debug(f'found {_time} in target reserves list. therefore next time.')
+                        # breakでコートのループを抜ける
+                        break
+            else:
+                # _d_valueの次のループに進む
+                continue
+    # 希望日+希望時間帯のリストを返す
+    #logger.debug(f'{target_reserves_list}')
+    return target_reserves_list
+
+# 東京都町田市向け
+# 検索対象日リストを作成する。希望日を追加、除外日を除外した日付リストを作成する
+def create_date_list_machida(target_months_list, public_holiday, cfg, logger=None):
+    """
+    検索対象日リストを作成する
+    プログラム実行日から1か月先までの日付リストを作成する。1か月先以降は空き予約できないため、無視する
+
+    Args:
+        target_months_list ([List]): 検索対象月の月リスト[description]
+        public_holiday ([Dict]): 祝日のDict[description]
+        cfg ([Dict]): 設定ファイル
+        logger ([Obj], optional): ロギングオブジェクト. Defaults to None.
+
+    Returns:
+        [List]: 検索対象日(YYYYMMDD)のリスト
+    """
+    # 
+    # タイムゾーンを設定する
+    JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
+    # 除外日リストを取得する
+    exclude_days = []
+    exclude_month_days_dict = cfg['exclude_month_days']
+    # 対象月リストから月を取得し、月毎の除外日リストを追加する
+    for _month in target_months_list:
+        # 除外日Dictから除外日のリストを取得する
+        # 除外日のリストがあるか確認する。空なら次の月に進む
+        if exclude_month_days_dict[str(_month)] == False:
+            continue
+        for _exclude_month_day in exclude_month_days_dict[str(_month)]:
+            _str_year = str(check_new_year(_month))
+            _str_month = str(_month).zfill(2)
+            _str_day = str(_exclude_month_day).zfill(2)
+            _str_date = _str_year + _str_month + _str_day
+            exclude_days.append(_str_date)
+    #logger.debug(f'exlude_days: {exclude_days}')
+    # 除外日も含めた検索対象日リストを作成する
+    # 多摩市向けの create_date_list を使う
+    _date_list_with_exclude = create_date_list(target_months_list, public_holiday, cfg)
+    #logger.debug(f'date_list_with_exclude_days: {_date_list_with_exclude}')
+    # 今日の日付を計算する
+    _now = datetime.datetime.now(JST)
+    # 翌月の日付を計算する
+    _one_month_after = _now + relativedelta(months=1)
+    #logger.debug(f'one_month_after: {_one_month_after}')
+    # 検索対象日のリストを作成する
+    date_list = []
+    for _str_date in _date_list_with_exclude:
+        # 文字列からtimeオブジェクトに変換して、タイムゾーン情報を付与する
+        _date = datetime.datetime.strptime(_str_date, '%Y%m%d').replace(tzinfo=datetime.timezone(datetime.timedelta(hours=9)))
+        #logger.debug(f'date: {_date}')
+        # 除外日リストに入っていないことを確認する
+        if _str_date not in exclude_days:
+            # 翌月の日付以前かを確認する
+            if _date <= _one_month_after:
+                date_list.append(_str_date)
     return date_list
 
 # LINEに空き予約を送信する

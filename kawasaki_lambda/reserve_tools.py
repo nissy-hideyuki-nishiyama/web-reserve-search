@@ -281,6 +281,8 @@ def create_day_list(month, public_holiday, cfg):
     selected_weekdays = cfg['want_weekdays']
     # 祝日以外の希望日リストを作成する
     want_month_days = cfg['want_month_days'][str(month)]
+    # 検索除外日リストを作成する
+    exclude_month_days = cfg['exclude_month_days'][str(month)]
     # 年越し確認をする
     year = check_new_year(month)
     # 対象日を格納するリストを初期化する
@@ -319,6 +321,12 @@ def create_day_list(month, public_holiday, cfg):
                 day_list.append(_want_day)
     # 重複した年月日日時を取り除き、昇順でソートして日にちのリストを作る
     target_days = sorted(list(set(day_list)))
+    # 除外日をリストから削除する
+    if exclude_month_days:
+        for _exclude_day in exclude_month_days:
+            # 除外日リストが存在した場合、削除する
+            if _exclude_day in target_days:
+                target_days.remove(int(_exclude_day))
     #print(target_days)
     return target_days
 
@@ -336,6 +344,8 @@ def create_want_day_list(month, public_holiday, cfg):
     want_month_days = cfg['want_month_days'][str(month)]
     # 除外日リストを作成する
     exclude_month_days = cfg['exclude_month_days'][str(month)]
+    # 予約希望除外日リストを作成する
+    exclude_want_month_days = cfg['exclude_want_month_days'][str(month)]
     # 希望遅延日を取得する
     days_later = int(cfg['days_later'])
     # 年越し確認をする
@@ -350,20 +360,17 @@ def create_want_day_list(month, public_holiday, cfg):
     after_month = after_date.month
     after_day = after_date.day
     # 月の処理
-    # X日後の月が指定月より大きい場合
-    if month < after_month:
-        return day_list
-    # X日後の月が指定月と同じ場合
-    elif month == after_month:
+    # X日後の月が指定月と同じ場合は、今日からX日後の日付(after_day)を_ref_dayとする
+    if month == after_month:
         _ref_day = after_day
-    # X日後の月が指定月より小さい場合
+    # X日後の月が翌月の場合は、対象月は空の日付リストを返す
     else:
-        _ref_day = 0
+        return day_list
     # 選択された曜日の日にちのリストを作成する
     for _wday in selected_weekdays:
         _day = _wday - first_weekday + 1
         while _day <= last_day:
-            if _day > _ref_day:
+            if _day >= _ref_day:
                 day_list.append(_day)
             _day += 7
     # 祝日の日をリストに追加する
@@ -382,10 +389,10 @@ def create_want_day_list(month, public_holiday, cfg):
                 day_list.append(_want_day)
     # 重複した年月日日時を取り除き、昇順でソートして日にちのリストを作る
     target_days = sorted(list(set(day_list)))
-    # 除外日をリストから削除する
-    if exclude_month_days:
-        for _exclude_day in exclude_month_days:
-            # 除外日リストが存在した場合、削除する
+    # 予約希望除外日をリストから削除する
+    if exclude_want_month_days:
+        for _exclude_day in exclude_want_month_days:
+            # 予約希望除外日リストが存在した場合、削除する
             if _exclude_day in target_days:
                 target_days.remove(int(_exclude_day))
     #print(target_days)
