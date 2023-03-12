@@ -168,7 +168,8 @@ def get_cookie_request(cfg, logger=None):
     retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))
     try:
-        response = session.get(cfg['first_url'], timeout=(3.0, 10.0))
+        # 2023/3/12: ふれあいネットの応答悪化に伴い、タイムアウト時間を(3.0, 10.0)から(6.0, 15.0)に変更する
+        response = session.get(cfg['first_url'], timeout=(6.0, 15.0))
     except requests.exceptions.Timeout as e:
         logger.exception(f'timeout for get cookie: {e}')
         http_req_num += retries
@@ -828,8 +829,10 @@ def do_reserves_from_datesearch(cfg, cookies, form_data, date, time, logger=None
     # デバッグ用としてhtmlファイルとして保存する
     #_file_name = f'result_do_reserve_{_datetime_string}.html'
     #reserve_tools.save_html_to_filename(reserve_response, _file_name)
+    # 利用規約ページが表示された場合、「利用規約に同意する」をチェックして、「詳細情報の入力へ」ボタンをクリックする
+    agree_response = agree_reserve(cfg, cookies, headers, reserve_response)
     # 予約施設の確認内容のフォームデータを取得する
-    ( reserve_form_data, _url ) = get_formdata_rsvCartDetails(reserve_response)
+    ( reserve_form_data, _url ) = get_formdata_rsvCartDetails(agree_response)
     # 「予約内容を確認する」ボタンをクリックする
     input_response = input_reserve(cfg, cookies, headers, reserve_form_data, _url)
     # デバッグ用としてhtmlファイルとして保存する
@@ -1108,6 +1111,59 @@ def doing_reserve(cfg, cookies, headers, form_data):
     # レスポンスを返す
     return response
 
+##　利用規約ページが表示されたか確認する
+def agree_reserve(cfg, cookies, headers, response):
+    """ 利用規約ページが表示されたか確認する
+
+    Args:
+        cfg (_type_): 設定のDict
+        cookies (_type_): 予約処理用に取得したcookies
+        headers (_type_): HTTPヘッダー
+        response (_type_): 予約確定の手続きのHTTPレスポンス
+
+    Returns:
+        agree_response: 規約同意のHTTPレスポンス
+    """
+    # レスポンスのURLを取得する
+    _url = str(response.url)
+    # 利用規約ページのURLであるか確認する
+    if cfg['cartuserules_url'] in _url:
+        # 同意処理する
+        agree_response = agree_rules(cfg, cookies, headers, response)
+    else:
+        agree_response = response
+    return agree_response
+
+## 規約同意処理をする
+def agree_rules(cfg, cookies, headers, response):
+    """規約同意のチェックをつけて、POSTリクエストする
+
+    Args:
+        cfg (_type_): 設定のDict
+        cookies (_type_): 予約処理用に取得したcookies
+        headers (_type_): HTTPヘッダー
+        response (_type_): 予約確定の手続きのHTTPレスポンス
+
+    Returns:
+        response: HTTPレスポンス
+    """
+    # 利用規約のフォームデータは2番目
+    _form_number = 1
+    # フォームデータを取得する
+    ( _form_data, _response_url )  = get_formdata_common(response, _form_number)
+    global http_req_num
+    # 利用規約の同意するのラジオボタンを選択する
+    _form_data['layoutChildBody:childForm:selected'] = 'ok'
+    # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
+    params = urllib.parse.urlencode(_form_data)
+    # ヘッダーのRefererを一部を書き換える
+    headers['Referer'] = response.url
+    # フォームデータを使って、「予約内容を確認する」ボタンをクリックする
+    response = requests.post(cfg['cartuserules_url'], headers=headers, cookies=cookies, data=params)
+    http_req_num += 1
+    # レスポンスを返す
+    return response
+    
 ## 予約施設の確認内容のフォームデータを取得する
 def get_formdata_rsvCartDetails(response):
     """
@@ -1133,7 +1189,9 @@ def input_reserve(cfg, cookies, headers, form_data, url):
     form_data['layoutChildBody:childForm:inputDetailsItems:0:purposeDetails'] = 'テニス'
     form_data['layoutChildBody:childForm:inputDetailsItems:0:gname'] = 'テニスグループ'
     form_data['layoutChildBody:childForm:inputDetailsItems:0:useCnt'] = '4'
-    form_data['layoutChildBody:childForm:doConfirm'] = '送信'
+    # form_data['layoutChildBody:childForm:doConfirm'] = '送信'
+    # 2023/03/12: Value値の変更
+    form_data['layoutChildBody:childForm:doConfirm'] = '予約を確定する'
     # 不要なフォームデータを削除する
     ## 取り消しボタンの値を削除する
     if 'layoutChildBody:childForm:inputDetailsItems:0:doCancel' in form_data:
