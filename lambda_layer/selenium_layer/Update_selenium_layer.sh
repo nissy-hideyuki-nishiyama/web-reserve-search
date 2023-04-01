@@ -1,9 +1,13 @@
 #!/bin/bash
 set -xeu
 
+Script_Path=$0
+Script="$(basename ${Script_Path})"
+Work_Dir="$(dirname ${Script_Path})"
+
 # 定数
-Root_Work_Dir=/home/hnishi/workdir/web-reserve-search
-Work_Dir=${Root_Work_Dir}/lambda_layer/selenium_layer
+#Root_Work_Dir=/home/hnishi/workdir/web-reserve-search
+#Work_Dir=${Root_Work_Dir}/lambda_layer/selenium_layer
 Zip_Filename=selenium_layer.zip
 Region=ap-northeast-1
 Profile=default
@@ -16,6 +20,9 @@ Date=$(date +%Y%m%d-%H%M)
 # カレントディレクトリのパス取得と変数設定
 Current_Dir=$(pwd)
 
+# echo "${Work_Dir} ${Script} ${Current_Dir}"
+# exit 0
+
 # 作業ディレクトリへの移動
 cd ${Work_Dir}
 
@@ -25,8 +32,8 @@ rm -rf python ${Zip_Filename}
 
 # 多摩市のrequirements.txtから必要なpipパッケージをダウンロードする
 echo "Get requirements.txt and create library zip."
-mkdir -p ${Work_Dir}/python
-pip3.8 install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/tama/requirements.txt --use-pep517
+mkdir -p python
+pip3 install -t ./python -r ../../tama/requirements.txt --use-pep517
 
 # zipファイルを作成する
 zip -ry ${Zip_Filename} ./python
