@@ -1,11 +1,8 @@
 FROM amazonlinux:2023
 
 # Chromiumの安定版のバージョンを取得する
-# jqを利用しているので、ここでは止める
-#ENV CHROME_DRIVER_VERSION=$(/workspace/lambda_layer/headless-chromium/chromedriver_version.sh)
-
-# install amazon-linux-extras install
-#RUN amazon-linux-extras install -y
+ARG MY_CHROME_DRIVER_VERSION
+ENV CHROME_DRIVER_VERSION=${MY_CHROME_DRIVER_VERSION}
 
 # yum update & install
 RUN dnf update -y \
@@ -55,7 +52,6 @@ RUN cd /distfiles \
 
 # install chromedriver
 RUN cd /distfiles \
-    && export CHROME_DRIVER_VERSION=$(/workspace/lambda_layer/headless-chromium/chromedriver_version.sh)
     && sudo wget https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip \
     && unzip ./chromedriver_linux64.zip \
     && ln -s /distfiles/chromedriver /usr/lib64/chromium-browser/chromedriver \

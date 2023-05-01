@@ -9,6 +9,12 @@
     "workspaceFolder": "/workspace",
     // ゲストOSでの実行ユーザ。全リポジトリ共通にしてます。
     //"remoteUser": "vscode",
+    // Chrome driverのステーブルバージョンを利用するため、build.argsで指定しようとするが、docker-composeでビルドするので、使われなかった
+    // "build": {
+    //   // "dockerfile": "Dockerfile",
+    //   // "args": { "MY_CHROME_DRIVER_VERSION": "$(bash /usr/local/bin/chromedriver_version.sh)" }
+    //   "args": { "MY_CHROME_DRIVER_VERSION": "112.0.5615.49" }
+    // },
     // ゲストOSの設定を変更する場合に利用する設定
     "customizations": {
       // VSCodeのデフォルトの設定を変更します

@@ -3,9 +3,11 @@ version: "3.7"
 services:
   webscribe:
     #build: .
-    # image: develop_amzlx-2023
-    # container_name: develop_amznlx-2023
-    #image: amazonlinux2023/develop:latest
+    build:
+      context: ..
+      dockerfile: ./server/Dockerfile
+      args:
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-112.0.5615.49}
     image: amazonlinux2023/webscribe_prod:latest
     # container_name: develop_amzlx2023
     container_name: prod_amzlx2023

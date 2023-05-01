@@ -1,7 +1,8 @@
 FROM amazonlinux:2023
 
-# install amazon-linux-extras install
-#RUN amazon-linux-extras install -y
+# Chromiumの安定版のバージョンを取得する
+ARG MY_CHROME_DRIVER_VERSION
+ENV CHROME_DRIVER_VERSION=${MY_CHROME_DRIVER_VERSION}
 
 # yum update & install
 RUN dnf update -y \
@@ -23,6 +24,7 @@ RUN dnf install wget \
     git \
     vim \
     python3-pip \
+    jq \
     -y
 
 # custom installed packages for running server
@@ -61,7 +63,6 @@ RUN useradd "ec2-user" && echo "ec2-user ALL=NOPASSWD: ALL" >> /etc/sudoers
 
 # install google-chrome-stable
 RUN cd /distfiles \
-    && export CHROME_DRIVER_VERSION=$(/workspace/lambda_layer/headless-chromium/chromedriver_version.sh)
     && sudo wget https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip \
     && sudo dnf install -y ./google-chrome-stable_current_x86_64.rpm \
     && sudo mkdir -p /usr/lib64/chromium-browser \
