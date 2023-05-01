@@ -91,6 +91,8 @@ def setup_driver():
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
+    # Docker+Python3の場合に必要
+    options.add_argument('--disable-dev-shm-usage')
     options.add_argument(f'--user-agent={headers["User-Agent"]}')
     options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
     # GUIによるデバッグ用。GUIでデバックする場合はこちらを選択する
