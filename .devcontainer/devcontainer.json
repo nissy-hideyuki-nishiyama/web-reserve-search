@@ -1,0 +1,37 @@
+{
+    // dev container名(どこに使われてるかよくわかってない)
+    "name": "dev_webscribe_python",
+    // 今回は docker-compose.ymlを利用する。
+    "dockerComposeFile": "docker-compose.yml",  
+    // docker-compose.yml内のサービス名を指定。
+    "service": "dev_webscribe",
+    // コンテナのどこにワークスペースを配置するかの指定。全リポジトリ共通にしてます。
+    "workspaceFolder": "/workspace",
+    // ゲストOSでの実行ユーザ。全リポジトリ共通にしてます。
+    //"remoteUser": "vscode",
+    // Chrome driverのステーブルバージョンを利用するため、build.argsで指定しようとするが、docker-composeでビルドするので、使われなかった
+    // "build": {
+    //   // "dockerfile": "Dockerfile",
+    //   // "args": { "MY_CHROME_DRIVER_VERSION": "$(bash /usr/local/bin/chromedriver_version.sh)" }
+    //   "args": { "MY_CHROME_DRIVER_VERSION": "112.0.5615.49" }
+    // },
+    // ゲストOSの設定を変更する場合に利用する設定
+    "customizations": {
+      // VSCodeのデフォルトの設定を変更します
+      // 'settings'を指定すればここでVSCodeの設定変更も可能
+      // 今回のポリシーとして拡張はこのファイルに記載
+      // VSCodeの動作変更は'workspace/.vscode/settings.json'に記載としています
+      "vscode": {
+        // 事前にゲストOS上のVSCodeで利用する拡張をインストールします
+        "extensions": [
+          // 全リポジトリにインストール
+          "EditorConfig.EditorConfig"
+          // 以下 python用の拡張
+        //   "ms-python.python",
+        //   "ms-python.flake8",
+        //   "ms-python.autopep8",
+        //   "njpwerner.autodocstring"
+        ]
+      }
+    }
+  }

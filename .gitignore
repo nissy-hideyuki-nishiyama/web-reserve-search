@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# My Credential
+config/
+cfg.json
+#.vscode/
+#.devcontainer/
