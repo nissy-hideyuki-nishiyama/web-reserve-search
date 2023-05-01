@@ -1,0 +1,29 @@
+version: "3.7"
+
+services:
+  webscribe:
+    #build: .
+    build:
+      context: ..
+      dockerfile: ./server/Dockerfile
+      args:
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-112.0.5615.49}
+    image: amazonlinux2023/webscribe_prod:latest
+    # container_name: develop_amzlx2023
+    container_name: prod_amzlx2023
+    privileged: true
+    restart: always
+    #user: 1000:1000
+    volumes:
+      - type: bind
+        source: ./web-reserve-search
+        target: /web-reserve-search
+      - type: bind
+        source: /root/.aws
+        target: /root/.aws
+      - type: bind
+        source: /root/.ssh
+        target: /root/.ssh
+      - type: bind
+        source: /root/.gitconfig
+        target: /root/.gitconfig

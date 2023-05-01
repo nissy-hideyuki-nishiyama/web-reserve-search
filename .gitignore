@@ -130,3 +130,6 @@ dmypy.json
 
 # My Credential
 config/
+cfg.json
+#.vscode/
+#.devcontainer/
