@@ -61,7 +61,8 @@ RUN useradd "ec2-user" && echo "ec2-user ALL=NOPASSWD: ALL" >> /etc/sudoers
 
 # install google-chrome-stable
 RUN cd /distfiles \
-    && sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm \
+    && export CHROME_DRIVER_VERSION=$(/workspace/lambda_layer/headless-chromium/chromedriver_version.sh)
+    && sudo wget https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip \
     && sudo dnf install -y ./google-chrome-stable_current_x86_64.rpm \
     && sudo mkdir -p /usr/lib64/chromium-browser \
     && sudo ln -s /usr/bin/google-chrome-stable /usr/lib64/chromium-browser/google-chrome-stable \
