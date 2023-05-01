@@ -1,0 +1,27 @@
+version: "3.7"
+
+services:
+  webscribe:
+    #build: .
+    # image: develop_amzlx-2023
+    # container_name: develop_amznlx-2023
+    #image: amazonlinux2023/develop:latest
+    image: amazonlinux2023/webscribe_prod:latest
+    # container_name: develop_amzlx2023
+    container_name: prod_amzlx2023
+    privileged: true
+    restart: always
+    #user: 1000:1000
+    volumes:
+      - type: bind
+        source: ./web-reserve-search
+        target: /web-reserve-search
+      - type: bind
+        source: /root/.aws
+        target: /root/.aws
+      - type: bind
+        source: /root/.ssh
+        target: /root/.ssh
+      - type: bind
+        source: /root/.gitconfig
+        target: /root/.gitconfig

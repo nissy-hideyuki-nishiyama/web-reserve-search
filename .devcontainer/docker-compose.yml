@@ -1,0 +1,25 @@
+version: "3.7"
+
+services:
+  dev_webscribe:
+    container_name: develop2023
+    hostname: devweb
+    build: .
+    #restart: always
+    working_dir: '/workspace'
+    tty: true
+    #privileged: true
+    #user: 1000:1000
+    volumes:
+      - type: bind
+        source: ../
+        target: /workspace
+      - type: bind
+        source: /root/.aws
+        target: /root/.aws
+      - type: bind
+        source: /root/.ssh
+        target: /root/.ssh
+      - type: bind
+        source: /root/.gitconfig
+        target: /root/.gitconfig
