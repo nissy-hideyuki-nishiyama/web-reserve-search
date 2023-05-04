@@ -57,6 +57,18 @@ RUN cd /distfiles \
     && ln -s /distfiles/chromedriver /usr/lib64/chromium-browser/chromedriver \
     && rm ./chromedriver_linux64.zip
 
+
+# Lambdaの開発でAWS SAM におけるローカルデバッグ環境が必要であり、Dockerコンテナを使うので、Dockerをインストールする
+RUN dnf install docker -y
+
+# AWS SAM と AWS Toolkitのインストール
+RUN cd /distfiles \
+    && sudo wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip \
+    && sudo unzip aws-sam-cli-linux-x86_64.zip -d sam-installation \
+    && sudo ./sam-installation/install \
+    && sam --version
+
 # 開発環境なので、initは不要
-# CMD ["/sbin/init"]
+# だが、Dockerコンテナでローカルデバッグするため必要となる
+CMD ["/sbin/init"]
 
