@@ -135,3 +135,6 @@ cfg.json
 #.devcontainer/
 .aws-sam/
 sam-app
+.venv/
+.venv/*
+sam-app-lambda
