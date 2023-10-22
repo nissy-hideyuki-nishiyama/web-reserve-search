@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 起動してから600秒以上経過した chromedriver headless_shell python3
+# プロセスをKillして、ゾンビプロセスが大量に残ることを防止する
+
 declare -a ProcessNameList=(chromedriver headless_shell python3)
 PID=$$
 CurrentTime=$(date +%s)
