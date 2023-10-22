@@ -6,7 +6,9 @@
     // docker-compose.yml内のサービス名を指定。
     "service": "dev_webscribe",
     // コンテナのどこにワークスペースを配置するかの指定。全リポジトリ共通にしてます。
-    "workspaceFolder": "/workspace",
+    // "workspaceFolder": "/workspace",
+    "workspaceFolder": "${localWorkspaceFolder}",
+    // "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
     // ゲストOSでの実行ユーザ。全リポジトリ共通にしてます。
     //"remoteUser": "vscode",
     // Chrome driverのステーブルバージョンを利用するため、build.argsで指定しようとするが、docker-composeでビルドするので、使われなかった
@@ -15,6 +17,25 @@
     //   // "args": { "MY_CHROME_DRIVER_VERSION": "$(bash /usr/local/bin/chromedriver_version.sh)" }
     //   "args": { "MY_CHROME_DRIVER_VERSION": "112.0.5615.49" }
     // },
+    "remoteEnv": {
+      "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+    },
+    // Dcoker-outside-of-Docker を DEVコンテナから利用する
+    // "runArgs": [ "--init" ],
+    // "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ],
+    "features": {
+      "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    },
+    // Docker-in-Docker を DEVコンテナから利用する
+    //"features": {
+    //  "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    //    "moby": false,
+    //    "azureDnsAutoDetection": false
+    //  }
+    //},
+    // Docker in Docker を構築する
+    //"runArgs": ["--init", "--privileged"],
+    //"overrideCommand": false,
     // ゲストOSの設定を変更する場合に利用する設定
     "customizations": {
       // VSCodeのデフォルトの設定を変更します
@@ -25,12 +46,17 @@
         // 事前にゲストOS上のVSCodeで利用する拡張をインストールします
         "extensions": [
           // 全リポジトリにインストール
-          "EditorConfig.EditorConfig"
+          "EditorConfig.EditorConfig",
           // 以下 python用の拡張
-        //   "ms-python.python",
-        //   "ms-python.flake8",
-        //   "ms-python.autopep8",
-        //   "njpwerner.autodocstring"
+          "ms-python.python",
+          "ms-python.flake8",
+          "ms-python.autopep8",
+          "njpwerner.autodocstring",
+          // AWS Lambda の SAM 開発環境
+          "ms-ceintl.vscode-language-pack-ja",
+          "ms-azuretools.vscode-docker",
+          "amazonwebservices.aws-toolkit-vscode",
+          "mark-tucker.aws-cli-configure"
         ]
       }
     }
