@@ -54,9 +54,9 @@ RUN cd /distfiles \
 
 # install chromedriver
 RUN cd /distfiles \
-    && sudo wget https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip \
+    && sudo wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip \
     && sudo unzip ./chromedriver_linux64.zip \
-    && sudo ln -s /distfiles/chromedriver /usr/lib64/chromium-browser/chromedriver \
+    && sudo ln -s /distfiles/chromedriver-linux64/chromedriver /usr/lib64/chromium-browser/chromedriver \
     && sudo rm ./chromedriver_linux64.zip
 
 # Lambdaの開発でAWS SAM におけるローカルデバッグ環境が必要であり、Dockerコンテナを使うので、Dockerをインストールする。
