@@ -133,3 +133,6 @@ config/
 cfg.json
 #.vscode/
 #.devcontainer/
+.venv/
+.venv/*
+sam-app-lambda
