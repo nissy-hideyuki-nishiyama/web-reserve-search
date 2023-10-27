@@ -22,6 +22,8 @@ RUN apt update -y \
         vim \
         python3-pip \
         python3.10-venv \
+        python3.11 \
+        python3.11-venv \
         jq \
         gawk \
         # snapd \
