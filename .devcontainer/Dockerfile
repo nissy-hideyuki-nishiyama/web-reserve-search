@@ -21,13 +21,23 @@ RUN apt update -y \
         git \
         vim \
         python3-pip \
+        python3.10-minimal \
         python3.10-venv \
-        python3.11 \
-        python3.11-venv \
+        # python3.11 \
+        # python3.11-minimal \
+        # python3.11-venv \
         jq \
         gawk \
         # snapd \
+        apt-file \
+        software-properties-common \
         -y
+
+
+# pythonのaptリポジトリをインポートする
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt update -y
+RUN apt install -y --only-upgrade python3.11 python3.11-venv python3.11-minimal
 
 # custom installed packages
 # RUN apt install 
@@ -57,9 +67,9 @@ RUN cd /distfiles \
 # install chromedriver
 RUN cd /distfiles \
     && sudo wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip \
-    && sudo unzip ./chromedriver_linux64.zip \
+    && sudo unzip ./chromedriver-linux64.zip \
     && sudo ln -s /distfiles/chromedriver-linux64/chromedriver /usr/lib64/chromium-browser/chromedriver \
-    && sudo rm ./chromedriver_linux64.zip
+    && sudo rm ./chromedriver-linux64.zip
 
 # Lambdaの開発でAWS SAM におけるローカルデバッグ環境が必要であり、Dockerコンテナを使うので、Dockerをインストールする。
 # 実際に使うのは、docker cli, docker-compose コマンドのみ

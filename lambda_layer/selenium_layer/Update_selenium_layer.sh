@@ -2,12 +2,13 @@
 set -xeu
 
 # 定数
-Root_Work_Dir=/home/hnishi/workdir/web-reserve-search
+# Root_Work_Dir=/home/hnishi/workdir/web-reserve-search
+Root_Work_Dir=/workspace
 Work_Dir=${Root_Work_Dir}/lambda_layer/selenium_layer
 Zip_Filename=selenium_layer.zip
 Region=ap-northeast-1
 Profile=default
-AWSCMD="aws --region ${Region} --profile ${Profile}"
+AWSCMD="aws --no-cli-pager --no-paginate --region ${Region} --profile ${Profile}"
 LayerName=selenium_layer
 S3Bucket=nissy-jp-distfiles-tky
 S3Path=build_lambda/lambda_layer
@@ -26,7 +27,7 @@ rm -rf python ${Zip_Filename}
 # 多摩市のrequirements.txtから必要なpipパッケージをダウンロードする
 echo "Get requirements.txt and create library zip."
 mkdir -p ${Work_Dir}/python
-pip3.8 install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/tama/requirements.txt --use-pep517
+pip3.11 install -t  ${Work_Dir}/python -r ${Root_Work_Dir}/tama/requirements.txt --use-pep517
 
 # zipファイルを作成する
 zip -ry ${Zip_Filename} ./python
@@ -38,5 +39,5 @@ ${AWSCMD} s3 cp ./${Zip_Filename} s3://${S3Bucket}/${S3Path}/
 # 所定のLambdaレイヤーに登録する
 ${AWSCMD} lambda publish-layer-version --layer-name ${LayerName} \
   --description "selenium_and_other_etc_pip_lib at ${Date}" \
-  --license-info "BSD" --compatible-runtimes python3.6 python3.7 python3.8 python3.9\
+  --license-info "BSD" --compatible-runtimes python3.8 python3.9 python3.10 python3.11 python3.12\
   --content S3Bucket=${S3Bucket},S3Key=${S3Path}/${Zip_Filename}
