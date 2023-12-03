@@ -963,7 +963,9 @@ def done_reserve(cfg, headers, cookies, response):
     del _form_data['ToYoyakuChangeButton1']
     del _form_data['ToYoyakuChangeButton2']
     del _form_data['CancelButton']
-    #print(json.dumps(_form_data, indent=2, ensure_ascii=False))
+    # 確認のチェックボタンにチェックを入れる
+    _form_data['ConfirmListView$ctrl0$ConfirmCheckBox'] = 'on'
+    # print(json.dumps(_form_data, indent=2, ensure_ascii=False))
     # 予約をクリックする
     response = requests.post(cfg['result_reserve_url'], headers=headers, cookies=cookies, data=_form_data)
     http_req_num += 1
@@ -1118,14 +1120,19 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
             ( cookies, reserved_list, reserved_num, reserved_num_for_weekend_of_next_month, rev_num_by_date ) = prepare_proc_for_reserve(cfg, headers, _id, _password, logger=logger)
             # 予約処理の継続確認。予約件数が上限値になったら次のIDの処理をする
             if reserved_num >= int(reserved_limit) and int(reserved_num_for_weekend_of_next_month) >= int(reserved_limit_for_next_month):
-                logger.info(f'reserve process stopped. because reserved limit({reserved_limit}) over: {reserved_num}')
+                logger.info(f'reserve process stopped by {_id}. because reserved limit({reserved_limit}) over: {reserved_num}')
                 logger.info(f'because reserved limit for weekend of next month({reserved_limit_for_next_month}) over: {reserved_num_for_weekend_of_next_month}')
-                #print(json.dumps(reserved_list, indent=2, ensure_ascii=False))
-                #return None
                 continue
-            #continue
+            # continue
             # 希望日+希望時間帯+希望コートのリストを元に空き予約を探し、予約処理を行う
             for _date, _time_list in target_reserves_list.items():
+                # 追加した予約によって、既存予約件数が上限を超えている場合はメッセージを出して処理を終了する
+                if int(reserved_num) >= int(reserved_limit) or int(reserved_num_for_weekend_of_next_month) >= int(reserved_limit_for_next_month):
+                    logger.info(f'reserve number is {reserved_num} over limit({reserved_limit}).')
+                    logger.info(f'reserve number for weekend of next month is ({reserved_limit_for_next_month}) over limit({reserved_limit_for_next_month}).')
+                    logger.info(f'ID:{_id} of reserve process is finished. next id of reserver process doing')
+                    # breakで日付と時間帯のループを抜けて、次のIDの処理に移る
+                    break
                 # 希望日に関する既存予約の件数を取得する
                 #_rev_num = get_reserved_num_at_date(reserved_list, _date, logger=logger)
                 if _date in rev_num_by_date:

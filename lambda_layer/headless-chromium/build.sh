@@ -26,7 +26,7 @@ cd "$BUILD_BASE"
 
 # build distfile package
 mkdir -p "${BUILD_BASE}/distfiles/headless-chromium"
-strip -o "$BUILD_BASE/distfiles/headless-chromium/headless_shell" build/chromium/src/out/Headless/headless_shell
+strip -o "${BUILD_BASE}/distfiles/headless-chromium/headless_shell" build/chromium/src/out/Headless/headless_shell
 cp -rf /build/chromium/src/out/Headless/swiftshader "${BUILD_BASE}/distfiles/headless-chromium/"
 cd "${BUILD_BASE}/distfiles/headless-chromium/"
 ln -s ./swiftshader/libEGL.so ./libEGL.so

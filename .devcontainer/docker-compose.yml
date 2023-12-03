@@ -8,23 +8,37 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
       args:
-        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-112.0.5615.49}
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-119.0.6045.105}
+        # MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-112.0.5615.49}
         # MY_CHROME_DRIVER_VERSION: $(bash ./lambda_layer/headless-chromium/chromedriver_version.sh)
     #restart: always
     working_dir: '/workspace'
     tty: true
-    #privileged: true
+    privileged: true
+    init: true
     #user: 1000:1000
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
+      # Dcoker-outside-of-Docker を DEVコンテナから利用する際に、ホスト側のDockerデーモンと通信するために、ホスト側のDockerデーモンのソケットをマウントする
       - type: bind
-        source: ../
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      # 開発プロジェクトとしてマウント
+      - type: bind
+        # source: ../
+        source: ${LOCAL_WORKSPACE_FOLDER:-../}
         target: /workspace
+      # rootアカウントの各種クレデンシャル情報をマウント
+      ## AWS
       - type: bind
         source: /root/.aws
         target: /root/.aws
+      ## ssh
       - type: bind
         source: /root/.ssh
         target: /root/.ssh
+      ## github
       - type: bind
         source: /root/.gitconfig
         target: /root/.gitconfig

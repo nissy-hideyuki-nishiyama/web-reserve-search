@@ -63,7 +63,7 @@ RUN useradd "ec2-user" && echo "ec2-user ALL=NOPASSWD: ALL" >> /etc/sudoers
 
 # install google-chrome-stable
 RUN cd /distfiles \
-    && sudo wget https://chromedriver.storage.googleapis.com/${CHROME_DRIVER_VERSION}/chromedriver_linux64.zip \
+    && sudo wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm \
     && sudo dnf install -y ./google-chrome-stable_current_x86_64.rpm \
     && sudo mkdir -p /usr/lib64/chromium-browser \
     && sudo ln -s /usr/bin/google-chrome-stable /usr/lib64/chromium-browser/google-chrome-stable \
@@ -72,10 +72,10 @@ RUN cd /distfiles \
 
 # install chromedriver
 RUN cd /distfiles \
-    && sudo wget https://chromedriver.storage.googleapis.com/112.0.5615.49/chromedriver_linux64.zip \
-    && unzip ./chromedriver_linux64.zip \
-    && ln -s /distfiles/chromedriver /usr/lib64/chromium-browser/chromedriver \
-    && rm ./chromedriver_linux64.zip
+    && sudo wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip \
+    && unzip ./chromedriver-linux64.zip \
+    && ln -s /distfiles/chromedriver-linux64/chromedriver /usr/lib64/chromium-browser/chromedriver \
+    && rm ./chromedriver-linux64.zip
 
 # init
 CMD ["/sbin/init"]
