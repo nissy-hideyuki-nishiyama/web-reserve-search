@@ -6,8 +6,9 @@ async-generator==1.10
 async-timeout==4.0.3
 attrs==23.1.0
 aws-lambda-builders==1.42.0
-aws-sam-cli==1.103.0
-aws-sam-translator==1.81.0
+# しばらく使わないのでコメントアウトする。AWS-SAMは長期休暇で行う
+# aws-sam-cli==1.103.0
+# aws-sam-translator==1.80.0
 beautifulsoup4==4.12.2
 binaryornot==0.4.4
 blinker==1.7.0
@@ -23,7 +24,7 @@ chardet==5.2.0
 charset-normalizer==3.3.2
 chevron==0.14.0
 click==8.1.7
-cookiecutter==2.5.0
+cookiecutter==2.4.0
 cryptography==41.0.5
 dateparser==1.2.0
 distlib==0.3.7

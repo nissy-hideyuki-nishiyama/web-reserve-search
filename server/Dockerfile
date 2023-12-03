@@ -37,6 +37,9 @@ RUN dnf install \
     rsyslog \
     rsyslog-logrotate \
     sysstat \
+    python3.11 \
+    python3.11-pip \
+    python3.11-setuptools \
     -y
 
 # running daemon service
