@@ -105,6 +105,8 @@ $ cd ~/workdir/webscribe/web-reserve-search/<city_name>
 $ ln -s ../reserve_tools/public_holiday.json ./public_holiday.json
 $ ln -s ../reserve_tools ./reserve_tools
 $ cp ~/workdir/develop/web-reserve-search/config/<city_name>/cfg.json ./
+[八王子市のみ]
+$ cp ~/workdir/develop/web-reserve-search/config/<city_name>/menu_map.json ./
 [多摩市のみ]
 $ cp ~/workdir/develop/web-reserve-search/config/<city_name>/court_map.json ./
 ```
