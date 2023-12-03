@@ -4,12 +4,11 @@ services:
   webscribe:
     #build: .
     build:
-      context: ..
-      dockerfile: ./server/Dockerfile
+      context: .
+      dockerfile: Dockerfile
       args:
-        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-112.0.5615.49}
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-118.0.5993.70}
     image: amazonlinux2023/webscribe_prod:latest
-    # container_name: develop_amzlx2023
     container_name: prod_amzlx2023
     privileged: true
     restart: always
@@ -27,3 +26,5 @@ services:
       - type: bind
         source: /root/.gitconfig
         target: /root/.gitconfig
+    # install cron job schedule for root : このコマンドを実行して終了してしまうからコメントアウトした
+    # command: crontab -u root /web-reserve-search/server/cron.d/root.cron
