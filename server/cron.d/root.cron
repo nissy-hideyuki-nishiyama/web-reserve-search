@@ -1,24 +1,23 @@
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 DISPLAY=:0
 # chrome版で、AWS Lambdaに移行しているので今は使わない
-##0 0-15,23 * * *       sleep 10 && cd /web-reserve-search/martgd_local && .venv/bin/python3 ./check_empty_reserves.py
+##0 0-15,23 * * *       sleep 10 && cd /web-reserve-search/martgd_local && ../.venv/bin/python3 ./check_empty_reserves.py
 # メインをマルチスレッド版に変更する
-#3-58/5 0-15,23 * * *   sleep 5 && cd /web-reserve-search/hachioji && .venv/bin/python3 ./check_empty_reserves_multi_thread.py
+#3-58/5 0-15,23 * * *   sleep 5 && cd /web-reserve-search/hachioji && ../.venv/bin/python3 ./check_empty_reserves_multi_thread.py
 # 予約処理を追加したバージョン
-3-58/5 0-15,23 * * *    sleep 5 && cd /web-reserve-search/hachioji && .venv/bin/python3 ./check_empty_reserves_multi_thread_multi_user_with_entry.py
+3-58/5 0-15,23 * * *    sleep 5 && cd /web-reserve-search/hachioji && ../.venv/bin/python3 ./check_empty_reserves_multi_thread_multi_user_with_entry.py
 # chrome版なので今は使わない
-##2-57/5 0-15,23 * * *  sleep 10 && cd /web-reserve-search/fureai && .venv/bin/python3 ./check_empty_reserves_2020092702.py
+##2-57/5 0-15,23 * * *  sleep 10 && cd /web-reserve-search/fureai && ../.venv/bin/python3 ./check_empty_reserves_2020092702.py
 # メインをマルチスレッド版に変更する。Lambdaで動かしているのでローカルは停止
-#2-57/5 0-15,22,23 * * *        sleep 10 && cd /web-reserve-search/kawasaki && .venv/bin/python3 ./check_empty_reserves_multi_thread_multi_users_with_entry.py
+#2-57/5 0-15,22,23 * * *        sleep 10 && cd /web-reserve-search/kawasaki && ../.venv/bin/python3 ./check_empty_reserves_multi_thread_multi_users_with_entry.py
 # 空き予約開放日のシステム運用開始時(7:00)のみ稼働する
-#49-59/5 21 12 * *       sleep 40 && cd /web-reserve-search/kawasaki && .venv/bin/python3 ./check_empty_reserves_multi_thread_multi_users_with_entry.py
-49-59/5 21 12 * *       sleep 40 && cd /web-reserve-search/kawasaki && .venv/bin/python3 ./check_empty_reserves_multi_thread_multi_users_with_entry.py
+49-59/5 21 12 * *       sleep 40 && cd /web-reserve-search/kawasaki && ../.venv/bin/python3 ./check_empty_reserves_multi_thread_multi_users_with_entry.py
 # Lambdaで動かしているのでローカルは停止
-#1-56/5 0-14,22,23 * * *        sleep 5 && cd /web-reserve-search/tama && .venv/bin/python3 ./check_empty_reserves_multi_asyncio_aiohttp_with_entry.py
-#31-56/5 21 * * *       sleep 5 && cd /web-reserve-search/tama && .venv/bin/python3 ./check_empty_reserves_multi_asyncio_aiohttp_with_entry.py
-0 15 * * *      sleep 5 && cd /web-reserve-search/tama && .venv/bin/python3 ./check_empty_reserves_multi_asyncio_aiohttp_with_entry.py
-0-55/5 0-15,23 * * *    sleep 5 && cd /web-reserve-search/chofu && .venv/bin/python3 ./check_empty_reserves.py
+#1-56/5 0-14,22,23 * * *        sleep 5 && cd /web-reserve-search/tama && ../.venv/bin/python3 ./check_empty_reserves_multi_asyncio_aiohttp_with_entry.py
+#31-56/5 21 * * *       sleep 5 && cd /web-reserve-search/tama && ../.venv/bin/python3 ./check_empty_reserves_multi_asyncio_aiohttp_with_entry.py
+0 15 * * *      sleep 5 && cd /web-reserve-search/tama && ../.venv/bin/python3 ./check_empty_reserves_multi_asyncio_aiohttp_with_entry.py
+0-55/5 0-15,23 * * *    sleep 5 && cd /web-reserve-search/chofu && ../.venv/bin/python3 ./check_empty_reserves.py
 # Chrome版
-1-56/5 0-14,23 * * *  sleep 5 && cd /web-reserve-search/machida && .venv/bin/python3 ./check_empty_reserves_multi_threads.py
+1-56/5 0-14,23 * * *  sleep 5 && cd /web-reserve-search/machida && ../.venv/bin/python3 ./check_empty_reserves_multi_threads.py
 # ゾンビプロセスを強制Killする
 4-59/5 * * * *  sleep 40 && cd /web-reserve-search/tools && bash ./Kill_LongRunChromeProcess.sh
