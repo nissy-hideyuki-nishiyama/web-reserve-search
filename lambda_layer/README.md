@@ -64,9 +64,9 @@ $ source /etc/default/locale
   - 上記ファイルはChromiumプロジェクトがheadlessとして適当であるという設定を書いたファイルであり、これをimportする
 - headless_shellのフットプリントサイズは327MB、out/Defaultでコンパイルしたchromeは1.2GBになる
   - strip -o コマンド実行後はheadlless_shellは230MB、 chromeは310MBに減少する
-
-- headless_shellのフットプリントサイズは、非圧縮で230MB 、圧縮で97MB
-- chromedriverのフットプリントサイズは、非圧縮で15MB、圧縮で7MB
+- 下記の情報はchromeium 118の時の情報
+  - headless_shellのフットプリントサイズは、非圧縮で230MB 、圧縮で97MB
+  - chromedriverのフットプリントサイズは、非圧縮で15MB、圧縮で7MB
 - seleniumレイヤーのフットプリントサイズは、非圧縮で60MB、圧縮で20MB
 
 
