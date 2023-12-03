@@ -17,6 +17,9 @@ Date=$(date +%Y%m%d-%H%M)
 # カレントディレクトリのパス取得と変数設定
 Current_Dir=$(pwd)
 
+# スクリプト終了後の事後処理
+trap "cd ${Work_Dir} && rm ${Zip_Filename}" 0
+
 # 作業ディレクトリへの移動
 cd ${Work_Dir}
 

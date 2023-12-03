@@ -11,7 +11,10 @@
 
 CHANNEL=${1:-stable}
 
-VERSION=$(curl -s https://omahaproxy.appspot.com/all.json | \
+# VERSION=$(curl -s https://omahaproxy.appspot.com/all.json | \
+#   jq -r ".[] | select(.os == \"linux\") | .versions[] | select(.channel == \"$CHANNEL\") | .current_version" \
+# )
+VERSION=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json | \
   jq -r ".[] | select(.os == \"linux\") | .versions[] | select(.channel == \"$CHANNEL\") | .current_version" \
 )
 

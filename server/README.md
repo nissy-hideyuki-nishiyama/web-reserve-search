@@ -111,7 +111,7 @@ $ cp ~/workdir/develop/web-reserve-search/config/<city_name>/menu_map.json ./
 $ cp ~/workdir/develop/web-reserve-search/config/<city_name>/court_map.json ./
 ```
 
-2. (Container:) 各予約サイトのvenv環境の構築(近日中に開発ルートディレクトリのvenv環境に全て統合する(TBD))
+2. (Container:) 各予約サイトのvenv環境の構築(近日中に開発ルートディレクトリのvenv環境に全て統合した(2023/12/03))
 ```bash
 # cd ~/workdir/webscribe/web-reserve-search/<city_name>
 # python3 -m venv .venv
