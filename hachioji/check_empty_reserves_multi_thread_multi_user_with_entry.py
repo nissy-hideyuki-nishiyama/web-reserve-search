@@ -103,7 +103,7 @@ def selenium_go_to_search_menu(driver, mouse, cfg, cookies, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # 空き状況を検索 画面に移動するため、右上の「空き状況を検索」ボタンをクリックする
-    driver.find_element(By.XPATH, '/html/body/div[1]/header/section/div/form/p/a').click()
+    driver.find_element(By.XPATH, '/html/body/div/div/header/section/div/form/p/a').click()
     http_req_num += 1
     return None
 
@@ -151,7 +151,7 @@ def selenium_input_datas(driver, input_date, logger=None):
     # DOM上に表示されるまで待機する
     # 検索フォームのフィールド設定
     wait = WebDriverWait(driver, 10)
-    f_shisetsu = wait.until(EC.presence_of_element_located((By.ID, "shisetsu")))
+    f_shisetsu = wait.until(EC.presence_of_element_located((By.NAME, "class")))
     # 分類フィールドで施設を選択する
     Select(f_shisetsu).select_by_index(shisetsuId)
     # 開始日フィールドが表示されるまで待機後、指定する
@@ -165,13 +165,13 @@ def selenium_input_datas(driver, input_date, logger=None):
     #wait.until(EC.element_to_be_clickable((By.NAME, "disp_type")))
     #wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "btnSearch js_recaptcha_submit")))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
-    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]")
+    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]")
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
     f_period.click()
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
-    driver.find_element(By.XPATH, ".//input[@type='button'][@value='検索する'][@class='btnSearch js_recaptcha_submit']").click()
+    driver.find_element(By.XPATH, "//*[@id='pageTop']/article/section[2]/div/form/table/tbody/tr[5]/td/button[2]").click()
     #sleep(30)
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
@@ -180,7 +180,7 @@ def selenium_input_datas(driver, input_date, logger=None):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     http_req_num += 1
     # 画面のtitleを確認する
-    assert '空き状況を検索｜八王子市施設予約システム' in driver.title
+    assert '空き状況を検索 | 八王子市施設予約システム' in driver.title
     #return cookie, ncforminfo_value
     return None
 
