@@ -766,7 +766,7 @@ def main_search_empty_reserves():
     ## メッセージ本体を作成する
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     #exit()
     return cfg, logger, threadsafe_list.reserves_list, target_months_list, public_holiday, headers
 
@@ -903,7 +903,8 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
                         message_bodies = []
                         message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        # reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # 空き状況の検索ページへ戻る
                         ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=logger)
             # クローラーのWEBブラウザを終了する

@@ -1085,12 +1085,12 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
     userauth = reserve_tools.get_userauth_dict(cfg)
     # 予約処理対象の希望日、希望時間帯のリストを作成する
     # 空き予約リストを昇順にソートする
-    #sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
+    # sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
     # 空き予約リストから、空き予約日と時間帯を取得する
-    #target_reserves_list = reserve_tools.create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+    # target_reserves_list = reserve_tools.create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     target_reserves_list = create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     # 希望日+希望時間帯のリストを出力する
-    #print(f'target_reserves_list: {target_reserves_list}')
+    # print(f'target_reserves_list: {target_reserves_list}')
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
     if bool(target_reserves_list) == False:
         logger.info(f'reserve process stopped. because empty reserves is not wanted.')
@@ -1185,7 +1185,7 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
                         # 予約確定通知のメッセージを作成する
                         message_bodies = reserve_tools.create_reserved_message(_id, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # 予約件数と指定年月日の予約件数に1件追加する
                         reserved_num += 1
                         _rev_num_by_date += 1
@@ -1215,7 +1215,7 @@ def postproc(reserves_list, logger=None):
     # 送信メッセージを作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
-    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     return None
 
 if __name__ == '__main__':
@@ -1268,7 +1268,7 @@ if __name__ == '__main__':
     postproc(reserves_list, logger=logger)
     logger.info(f'finished to search empty reserve.')
     # 空き予約リストに値があるかないかを判断し、予約処理を開始する
-    #print(f'reserves_list: {threadsafe_list.reserves_list}')
+    # print(f'reserves_list: {threadsafe_list.reserves_list}')
     if len(reserves_list) == 0:
         logger.info(f'stop do reserve because no empty reserve.')
     else:

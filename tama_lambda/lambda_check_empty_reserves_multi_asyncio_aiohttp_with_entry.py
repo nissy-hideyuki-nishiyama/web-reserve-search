@@ -1086,7 +1086,7 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
                         # 予約確定通知のメッセージを作成する
                         message_bodies = reserve_tools.create_reserved_message(_id, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # 予約件数と指定年月日の予約件数に1件追加する
                         reserved_num += 1
                         _rev_num_by_date += 1
@@ -1116,7 +1116,7 @@ def postproc(cfg, reserves_list, logger=None):
     # 送信メッセージを作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
-    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     return None
 
 ### メインルーチン ###
