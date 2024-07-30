@@ -45,7 +45,7 @@ from hashlib import md5
 from pathlib import Path
 
 # ツールライブラリを読み込む
-import reserve_tools
+from reserve_tools import reserve_tools
 
 http_req_num = 0
 
@@ -175,10 +175,10 @@ def get_empty_reserves(response, cfg, day, reserves_list):
     court_table = soup.find(class_='table-vertical table-timeselect-sisetu')
     court_string = court_table.tr.td.next_sibling.next_sibling.stripped_strings
     for name in court_string:
-        court_name = re.sub('庭球場（奈良原以外）\s+', '', name)
-        court_name = re.sub('^奈良原公園庭球場\s+', '', court_name)
+        court_name = re.sub(r'庭球場（奈良原以外）\s+', '', name)
+        court_name = re.sub(r'^奈良原公園庭球場\s+', '', court_name)
         # '※午後８時閉場　緊急事態宣言期間中　'の文字列があった場合は削除する
-        court_name = re.sub('※午後８時閉場　緊急事態宣言期間中　', '', court_name)
+        court_name = re.sub(r'※午後８時閉場　緊急事態宣言期間中　', '', court_name)
         #print(court_name)
     # 空き予約時間帯を取得する
     ## 空き予約時間のテーブル
@@ -188,10 +188,10 @@ def get_empty_reserves(response, cfg, day, reserves_list):
     for empty in empty_table.find_all(class_='aki_empty_left'):
         empty_string = empty.div.label.string
         # 文字列の？を削除する
-        reserve = re.sub('^\D+', '', empty_string)
+        reserve = re.sub(r'^\D+', '', empty_string)
         # 一桁の時間帯の文字列に0を入れる
-        reserve = re.sub('^(\d):', r'0\1:', reserve)
-        reserve = re.sub('～\s(\d):', r'～0\1:', reserve)
+        reserve = re.sub(r'^(\d):', r'0\1:', reserve)
+        reserve = re.sub(r'～\s(\d):', r'～0\1:', reserve)
         # 空き予約の除外時間帯かを確認し、除外時間帯以外を登録する
         _match_count = 0
         _exclude_time_count = len(cfg['exclude_times'])
@@ -349,7 +349,7 @@ async def get_request_time(cfg, cookies, court_link_list, coro, limit=1):
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
         for _day, _link_list in court_link_list.items():
             for _link in _link_list:
-                search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', _link)
+                search_url = cfg['court_search_url'] + re.sub(r'^\.\/ykr31103\.aspx', '', _link)
                 # デバッグ用ファイル名として保存するエンティティ名を生成する
                 name = md5(search_url.encode('utf-8')).hexdigest()
                 _entity = f'{_day}_{name}'
@@ -379,16 +379,18 @@ def prepare():
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
     cfg = reserve_tools.read_json_cfg('cfg.json')
+    # ロギングを設定する
+    logger = reserve_tools.mylogger(cfg)
     # 検索リストを作成する
     ## 検索対象月を取得する
     target_months_list = reserve_tools.create_month_list(cfg)
     ## 検索対象月リストと祝日リストから検索対象年月日リストを作成する
     date_list = reserve_tools.create_date_list(target_months_list, public_holiday, cfg)
-    return cfg, date_list
+    return cfg, logger, date_list
 
 # 検索対象年月日を指定して、空き予約コートがある年月日と空きコートリンクのリストを取得する
 @reserve_tools.elapsed_time
-def main(request_objs, coro, limit=4):
+def main(request_objs, coro, limit=4, logger=None):
     """
     検索対象年月日を指定して、空き予約コートがある年月日と空きコートリンクのリストを取得する
     """
@@ -397,7 +399,7 @@ def main(request_objs, coro, limit=4):
     # HTTPリクエスト数
     global http_req_num
     # 非同期IO処理のaiohttpのためにイベントループを作成する
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     # 空き予約検索を開始する
     ## 検索のためのリクエストオブジェクトを作成する
     results = loop.run_until_complete(get_request_courts(request_objs, coro, limit))
@@ -420,7 +422,7 @@ def main2(cfg, cookies, court_link_list, coro, limit=4):
     # HTTPリクエスト数
     global http_req_num
     # 非同期IO処理のaiohttpのためにイベントループを作成する
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     # 空き予約検索を開始する
     ## 検索のためのリクエストオブジェクトを作成する
     results = loop.run_until_complete(get_request_time(cfg, cookies, court_link_list, coro, limit))
@@ -433,16 +435,16 @@ def main2(cfg, cookies, court_link_list, coro, limit=4):
     return results
 
 # 事後処理
-def postproc(reserves_list):
+def postproc(reserves_list, logger=None):
     """
     空き予約リストを整形して、LINEにメッセージを送信する
     """
     # 送信メッセージリストの初期化
     message_bodies = []
     # 送信メッセージを作成する
-    message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
+    message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
-    reserve_tools.send_line_notify(message_bodies, cfg)
+    reserve_tools.send_line_notify(message_bodies,cfg['line_token'], logger=logger)
     return None
 
 if __name__ == '__main__':
@@ -456,7 +458,7 @@ if __name__ == '__main__':
     reserves_list = async_lock_reserves.reserves_list
 
     # 事前準備
-    ( cfg, date_list ) = prepare()
+    ( cfg, logger, date_list ) = prepare()
     # 同時実行数
     threads = cfg['threads_num']
     ( cookies, form_datas ) = get_cookie(cfg)
@@ -501,7 +503,7 @@ if __name__ == '__main__':
     #print(json.dumps(reserves_list, indent=2, ensure_ascii=False))
     
     # LINEにメッセージを送信する
-    postproc(reserves_list)
+    postproc(reserves_list, logger=logger)
 
     # デバッグ用(HTTPリクエスト回数を表示する)
     print(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
