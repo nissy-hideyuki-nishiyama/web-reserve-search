@@ -35,6 +35,9 @@ RUN apt update -y \
         # snapd \
         apt-file \
         software-properties-common \
+        file \
+        libmagic-mgc \
+        libmacic1t64 \
         -y
 
 
