@@ -78,7 +78,7 @@ ${AWSCMD} s3 cp "${ZIP_FILENAME}" s3://"${S3_BUCKET}"/"${S3_PATH}"/
 # 所定のLambdaレイヤーに登録する
 ${AWSCMD} lambda publish-layer-version --layer-name "${LAYER_NAME}" \
   --description "headless_chrome_shell at ${Date}" \
-  --license-info "BSD" --compatible-runtimes python3.8 python3.9 python3.10 python3.11 python3.12 \
+  --license-info "BSD" --compatible-runtimes python3.11 python3.12 \
   --content S3Bucket="${S3_BUCKET}",S3Key="${S3_PATH}"/"${ZIP_FILENAME}"
 
 exit 0

@@ -12,7 +12,7 @@
 
 ## selenimu_layer
 
-下記のコマンドを実行すると、zipファイル作成後、S3バケットにアップロードした後、Lambdaレイヤーに登録する。
+下記のコマンドを実行すると、zipファイルを作成し、S3バケットにアップロードした後、Lambdaレイヤーに登録する。
 
 ```bash
 $ cd lambda_layer/selenium_layer
@@ -21,12 +21,18 @@ $ Update_selenium_layer.sh
 
 ## headless-chromium
 
-下記のコマンドを実行すると、zipファイル作成後、S3バケットにアップロードした後、Lambdaレイヤーに登録する。
+下記のコマンドを実行すると、zipファイルを作成し、S3バケットにアップロードした後、Lambdaレイヤーに登録する。
 
 ```bash
 $ cd lambda_layer/headless-chromium
 $ Update_headless_chrome_shell.sh
 ```
+
+- 2024/7/30 (chrome 127.0.6533.57) 時点では、chrome-headless-shellのサイズがLambdaの250MB制限に抵触し、Lambda レイヤーの登録でエラーになる
+‐ selenium ⁺ headless-shell を利用したい場合は、下記の方法のいずれかで対応するしかない
+  ‐ Dockerコンテナイメージを作成し、ECR経由でLambdaとして使う
+  ‐ EFS上にパッケージを展開して、これをLambdaがマウントする
+  ‐ S3にアップロードして、実行時にzipdファイルをダウンロード、展開して、利用する
 
 ------------------------
 
