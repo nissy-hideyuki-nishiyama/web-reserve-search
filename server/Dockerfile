@@ -25,14 +25,14 @@ RUN dnf install wget \
     vim \
     python3-pip \
     jq \
-    # python3.12の野良ビルドに必要
+    # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
     openssl \
     openssl-devel \
     bzip2-devel \
     libffi-devel \
     -y
 
-# python3.12の野良ビルドに必要
+# python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
 RUN dnf groupinstall "Development Tools" -y
 
 # custom installed packages for running server
