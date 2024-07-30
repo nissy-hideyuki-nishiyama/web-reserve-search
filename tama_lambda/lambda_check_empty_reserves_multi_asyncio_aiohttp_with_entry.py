@@ -179,10 +179,10 @@ def get_empty_reserves(response, cfg, day, reserves_list, logger=None):
     court_table = soup.find(class_='table-vertical table-timeselect-sisetu')
     court_string = court_table.tr.td.next_sibling.next_sibling.stripped_strings
     for name in court_string:
-        court_name = re.sub('庭球場（奈良原以外）\s+', '', name)
-        court_name = re.sub('^奈良原公園庭球場\s+', '', court_name)
+        court_name = re.sub(r'庭球場（奈良原以外）\s+', '', name)
+        court_name = re.sub(r'^奈良原公園庭球場\s+', '', court_name)
         # '※午後８時閉場　緊急事態宣言期間中　'の文字列があった場合は削除する
-        court_name = re.sub('※午後８時閉場　緊急事態宣言期間中　', '', court_name)
+        court_name = re.sub(r'※午後８時閉場　緊急事態宣言期間中　', '', court_name)
         #print(court_name)
     # 空き予約時間帯を取得する
     ## 空き予約時間のテーブル
@@ -192,10 +192,10 @@ def get_empty_reserves(response, cfg, day, reserves_list, logger=None):
     for empty in empty_table.find_all(class_='aki_empty_left'):
         empty_string = empty.div.label.string
         # 文字列の？を削除する
-        reserve = re.sub('^\D+', '', empty_string)
+        reserve = re.sub(r'^\D+', '', empty_string)
         # 一桁の時間帯の文字列に0を入れる
-        reserve = re.sub('^(\d):', r'0\1:', reserve)
-        reserve = re.sub('～\s(\d):', r'～0\1:', reserve)
+        reserve = re.sub(r'^(\d):', r'0\1:', reserve)
+        reserve = re.sub(r'～\s(\d):', r'～0\1:', reserve)
         # 空き予約の除外時間帯かを確認し、除外時間帯以外を登録する
         _match_count = 0
         _exclude_time_count = len(cfg['exclude_times'])
@@ -353,7 +353,7 @@ async def get_request_time(cfg, cookies, court_link_list, coro, limit=1):
     async with ClientSession(connector=TCPConnector(ssl=False)) as session:
         for _day, _link_list in court_link_list.items():
             for _link in _link_list:
-                search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', _link)
+                search_url = cfg['court_search_url'] + re.sub(r'^\.\/ykr31103\.aspx', '', _link)
                 # デバッグ用ファイル名として保存するエンティティ名を生成する
                 name = md5(search_url.encode('utf-8')).hexdigest()
                 _entity = f'{_day}_{name}'
@@ -635,10 +635,10 @@ def get_current_reserved_list(response, logger=None):
         # 時間を取得
         _time = _datetime.split('\u3000')[1]
         # 一桁の時間帯の文字列に0を入れる
-        _time = re.sub('^(\d):', r'0\1:', _time)
-        _time = re.sub('～(\d):', r'～0\1:', _time)
+        _time = re.sub(r'^(\d):', r'0\1:', _time)
+        _time = re.sub(r'～(\d):', r'～0\1:', _time)
         # 曜日を削除
-        _date = re.sub('\(\w\)', '', _date)
+        _date = re.sub(r'\(\w\)', '', _date)
         _year = str(int(_date.split('.')[0]) + 2018)
         _month = str(_date.split('.')[1]).zfill(2)
         _day = str(_date.split('.')[2]).zfill(2)
