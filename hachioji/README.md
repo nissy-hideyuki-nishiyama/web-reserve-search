@@ -71,6 +71,7 @@
 - exclude_courts: 空き予約コート検索から除外したいコート(一の宮公園)のコードを記述する。コードはコート名とコートのコードの対応ファイル(court_map.json)を参照のこと
 - exclude_times: 空き予約コート検索から除外したい時間帯を指定する
 - line_token: 通知先のLINEグループに参加しているLINE Notifyのトークンコードを指定する
+- line_token_reserved: 予約確定に対する通知先のLINEグループに参加しているLINE Notifyのトークンコードを指定する
 - line_max_message_size: LINE Notifyの最大文字数(1000文字固定)を指定する
 - threads_num: 並列処理の同時実行数を指定する
 - logger_conf: アプリケーションログの設定
@@ -149,6 +150,7 @@
     "戸吹スポーツ公園"
   ],
   "line_token": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  "line_token_reserved": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
   "line_max_message_size": 1000,
   "threads_num": 4,
   "logger_conf": {
