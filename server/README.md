@@ -113,11 +113,11 @@ $ cp ~/workdir/develop/web-reserve-search/config/<city_name>/court_map.json ./
 
 2. (Container:) 各予約サイトのvenv環境の構築(近日中に開発ルートディレクトリのvenv環境に全て統合した(2023/12/03))
 ```bash
-# cd ~/workdir/webscribe/web-reserve-search/<city_name>
+# cd /web-reserve-search
 # python3 -m venv .venv
 # source .venv/bin/activate
-# pip install -U pip
-# pip install -r requirements.txt
+# pip install -r tama_lambda/requirements.txt
+# pip-review --auto
 
 [動作確認]
 # .venv/bin/python3 ./<prog_name>.py

@@ -1,4 +1,4 @@
-version: "3.7"
+# version: "3.7"
 
 services:
   webscribe:
@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-118.0.5993.70}
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-127.0.6533.72}
     image: amazonlinux2023/webscribe_prod:latest
     container_name: prod_amzlx2023
     privileged: true
