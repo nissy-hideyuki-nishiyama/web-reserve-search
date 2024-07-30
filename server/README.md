@@ -9,14 +9,14 @@
 
 ## DEVコンテナと常時稼働型コンテナ、Lambda開発コンテナの共通仕様
 
-- HostOS: Ubuntu 22.04 LTS
-- Docker 23.0.5
+- HostOS: Ubuntu 24.04 LTS
+- Docker 27.1.1
 - docker-composer 1.29.2
 
 ### DEVコンテナ
 
 - $HOME/workddir/develop/web-reserve-search/.devcontainer 以下のファイルでDEVコンテナが起動される
-- ubuntu 22.04 のDockerイメージ
+- ubuntu 24.04 のDockerイメージ
 - Dockerイメージのタグ: web-reserve-search_devcontainer_dev_webscribe
 - Dockerコンテナ名: develop2023
 

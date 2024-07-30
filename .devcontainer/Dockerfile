@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Chromiumの安定版のバージョンを取得する
 ARG MY_CHROME_DRIVER_VERSION
@@ -11,7 +11,8 @@ RUN apt update -y \
         unzip \
         sudo \
         zip \
-        lsb \
+        lsb-base \
+        lsb-release \
         wget \
         curl \
         iproute2 \
@@ -21,11 +22,14 @@ RUN apt update -y \
         git \
         vim \
         python3-pip \
-        python3.10-minimal \
-        python3.10-venv \
-        # python3.11 \
-        # python3.11-minimal \
-        # python3.11-venv \
+#        python3.10-minimal \
+#        python3.10-venv \
+#        python3.11 \
+#        python3.11-minimal \
+#        python3.11-venv \
+        python3.12 \
+        python3.12-minimal \
+        python3.12-venv \
         jq \
         gawk \
         # snapd \
@@ -37,7 +41,10 @@ RUN apt update -y \
 # pythonのaptリポジトリをインポートする
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt update -y
-RUN apt install -y --only-upgrade python3.11 python3.11-venv python3.11-minimal
+RUN apt install -y \
+        python3.10 python3.10-venv python3.10-minimal \
+        python3.11 python3.11-venv python3.11-minimal \
+        python3.12 python3.12-venv python3.12-minimal
 
 # custom installed packages
 # RUN apt install 

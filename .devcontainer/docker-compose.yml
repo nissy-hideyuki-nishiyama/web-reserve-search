@@ -1,4 +1,4 @@
-version: "3.7"
+# version: "3.7"
 
 services:
   dev_webscribe:
@@ -8,7 +8,8 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
       args:
-        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-119.0.6045.105}
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-127.0.6533.72}
+        # MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-119.0.6045.105}
         # MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-112.0.5615.49}
         # MY_CHROME_DRIVER_VERSION: $(bash ./lambda_layer/headless-chromium/chromedriver_version.sh)
     #restart: always
