@@ -186,10 +186,10 @@ def get_empty_reserves(response, cfg, day, reserves_list, logger=None):
     court_table = soup.find(class_='table-vertical table-timeselect-sisetu')
     court_string = court_table.tr.td.next_sibling.next_sibling.stripped_strings
     for name in court_string:
-        court_name = re.sub('庭球場（奈良原以外）\s+', '', name)
-        court_name = re.sub('^奈良原公園庭球場\s+', '', court_name)
+        court_name = re.sub(r'庭球場（奈良原以外）\s+', '', name)
+        court_name = re.sub(r'^奈良原公園庭球場\s+', '', court_name)
         # '※午後８時閉場　緊急事態宣言期間中　'の文字列があった場合は削除する
-        court_name = re.sub('※午後８時閉場　緊急事態宣言期間中　', '', court_name)
+        court_name = re.sub(r'※午後８時閉場　緊急事態宣言期間中　', '', court_name)
         #print(court_name)
     # 空き予約時間帯を取得する
     ## 空き予約時間のテーブル
@@ -199,10 +199,10 @@ def get_empty_reserves(response, cfg, day, reserves_list, logger=None):
     for empty in empty_table.find_all(class_='aki_empty_left'):
         empty_string = empty.div.label.string
         # 文字列の？を削除する
-        reserve = re.sub('^\D+', '', empty_string)
+        reserve = re.sub(r'^\D+', '', empty_string)
         # 一桁の時間帯の文字列に0を入れる
-        reserve = re.sub('^(\d):', r'0\1:', reserve)
-        reserve = re.sub('～\s(\d):', r'～0\1:', reserve)
+        reserve = re.sub(r'^(\d):', r'0\1:', reserve)
+        reserve = re.sub(r'～\s(\d):', r'～0\1:', reserve)
         # 空き予約の除外時間帯かを確認し、除外時間帯以外を登録する
         _match_count = 0
         _exclude_time_count = len(cfg['exclude_times'])
@@ -360,7 +360,7 @@ async def get_request_time(cfg, cookies, court_link_list, coro, limit=1):
     async with ClientSession(connector=TCPConnector(ssl=False)) as session:
         for _day, _link_list in court_link_list.items():
             for _link in _link_list:
-                search_url = cfg['court_search_url'] + re.sub('^\.\/ykr31103\.aspx', '', _link)
+                search_url = cfg['court_search_url'] + re.sub(r'^\.\/ykr31103\.aspx', '', _link)
                 # デバッグ用ファイル名として保存するエンティティ名を生成する
                 name = md5(search_url.encode('utf-8')).hexdigest()
                 _entity = f'{_day}_{name}'
@@ -416,7 +416,7 @@ def main(request_objs, coro, limit=4, logger=None):
     # HTTPリクエスト数
     global http_req_num
     # 非同期IO処理のaiohttpのためにイベントループを作成する
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     # 空き予約検索を開始する
     ## 検索のためのリクエストオブジェクトを作成する
     results = loop.run_until_complete(get_request_courts(request_objs, coro, limit))
@@ -439,7 +439,7 @@ def main2(cfg, cookies, court_link_list, coro, limit=4, logger=None):
     # HTTPリクエスト数
     global http_req_num
     # 非同期IO処理のaiohttpのためにイベントループを作成する
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     # 空き予約検索を開始する
     ## 検索のためのリクエストオブジェクトを作成する
     results = loop.run_until_complete(get_request_time(cfg, cookies, court_link_list, coro, limit))
@@ -732,10 +732,10 @@ def get_current_reserved_list(response, logger=None):
         # 時間を取得
         _time = _datetime.split('\u3000')[1]
         # 一桁の時間帯の文字列に0を入れる
-        _time = re.sub('^(\d):', r'0\1:', _time)
-        _time = re.sub('～(\d):', r'～0\1:', _time)
+        _time = re.sub(r'^(\d):', r'0\1:', _time)
+        _time = re.sub(r'～(\d):', r'～0\1:', _time)
         # 曜日を削除
-        _date = re.sub('\(\w\)', '', _date)
+        _date = re.sub(r'\(\w\)', '', _date)
         _year = str(int(_date.split('.')[0]) + 2018)
         _month = str(_date.split('.')[1]).zfill(2)
         _day = str(_date.split('.')[2]).zfill(2)
@@ -1085,12 +1085,12 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
     userauth = reserve_tools.get_userauth_dict(cfg)
     # 予約処理対象の希望日、希望時間帯のリストを作成する
     # 空き予約リストを昇順にソートする
-    #sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
+    # sorted_reserves_list = reserve_tools.sort_reserves_list(reserves_list)
     # 空き予約リストから、空き予約日と時間帯を取得する
-    #target_reserves_list = reserve_tools.create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
+    # target_reserves_list = reserve_tools.create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     target_reserves_list = create_target_reserves_list_prior_court(sorted_reserves_list, want_date_list, want_hour_list, want_location_list)
     # 希望日+希望時間帯のリストを出力する
-    #print(f'target_reserves_list: {target_reserves_list}')
+    # print(f'target_reserves_list: {target_reserves_list}')
     # 希望日+希望時間帯のリストが空の場合は予約処理を中止する
     if bool(target_reserves_list) == False:
         logger.info(f'reserve process stopped. because empty reserves is not wanted.')
@@ -1185,7 +1185,7 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
                         # 予約確定通知のメッセージを作成する
                         message_bodies = reserve_tools.create_reserved_message(_id, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # 予約件数と指定年月日の予約件数に1件追加する
                         reserved_num += 1
                         _rev_num_by_date += 1
@@ -1215,7 +1215,7 @@ def postproc(reserves_list, logger=None):
     # 送信メッセージを作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
-    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     return None
 
 if __name__ == '__main__':
@@ -1268,7 +1268,7 @@ if __name__ == '__main__':
     postproc(reserves_list, logger=logger)
     logger.info(f'finished to search empty reserve.')
     # 空き予約リストに値があるかないかを判断し、予約処理を開始する
-    #print(f'reserves_list: {threadsafe_list.reserves_list}')
+    # print(f'reserves_list: {threadsafe_list.reserves_list}')
     if len(reserves_list) == 0:
         logger.info(f'stop do reserve because no empty reserve.')
     else:

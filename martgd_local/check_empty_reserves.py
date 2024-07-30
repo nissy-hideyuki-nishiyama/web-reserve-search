@@ -314,7 +314,7 @@ def main():
     # 送信メッセージ本体を作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINE Notifyに空き予約情報のメッセージを送信する
-    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     # 終了する
     #exit()
     return logger

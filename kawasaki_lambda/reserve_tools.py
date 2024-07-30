@@ -716,14 +716,14 @@ def create_reserved_message(userid, reserved_number, reserve, message_bodies, cf
     return message_bodies
 
 # LINEにメッセージを送信する
-def send_line_notify(message_bodies, cfg, logger=None):
+def send_line_notify(message_bodies, token, logger=None):
     """
     LINE Notifyを使ってメッセージを送信する
     """
     #print(f'sending to LINE.')
     #print(message_bodies)
     #print(len(message_bodies[0]))
-    line_notify_token = cfg['line_token']
+    line_notify_token = token
     line_notify_api = 'https://notify-api.line.me/api/notify'
     headers = {'Authorization': f'Bearer {line_notify_token}'}
     # メッセージの長さが1(\n分)の場合はコンソールに空き予約がないメッセージを表示する

@@ -9,14 +9,14 @@
 
 ## DEVコンテナと常時稼働型コンテナ、Lambda開発コンテナの共通仕様
 
-- HostOS: Ubuntu 22.04 LTS
-- Docker 23.0.5
+- HostOS: Ubuntu 24.04 LTS
+- Docker 27.1.1
 - docker-composer 1.29.2
 
 ### DEVコンテナ
 
 - $HOME/workddir/develop/web-reserve-search/.devcontainer 以下のファイルでDEVコンテナが起動される
-- ubuntu 22.04 のDockerイメージ
+- ubuntu 24.04 のDockerイメージ
 - Dockerイメージのタグ: web-reserve-search_devcontainer_dev_webscribe
 - Dockerコンテナ名: develop2023
 
@@ -113,11 +113,11 @@ $ cp ~/workdir/develop/web-reserve-search/config/<city_name>/court_map.json ./
 
 2. (Container:) 各予約サイトのvenv環境の構築(近日中に開発ルートディレクトリのvenv環境に全て統合した(2023/12/03))
 ```bash
-# cd ~/workdir/webscribe/web-reserve-search/<city_name>
+# cd /web-reserve-search
 # python3 -m venv .venv
 # source .venv/bin/activate
-# pip install -U pip
-# pip install -r requirements.txt
+# pip install -r tama_lambda/requirements.txt
+# pip-review --auto
 
 [動作確認]
 # .venv/bin/python3 ./<prog_name>.py
