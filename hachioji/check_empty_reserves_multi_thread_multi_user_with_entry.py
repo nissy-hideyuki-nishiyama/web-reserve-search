@@ -198,12 +198,12 @@ def get_empty_court_time(cfg, threadsafe_list, date, html, logger=None):
     for _tag in _form:
         # 登録フラグを初期化する。0なら登録対象とする
         _regist_flag = 0
-        # 空き予約の時間帯を取得する
-        _time = _tag.parent.previous_sibling.string
+        # 空き予約の時間帯を取得する 2024/7/28 WEBサイトのCSS変更に伴い修正する
+        _time = _tag.find_parent("tr").find("td", class_="timeZone").contents[0].strip()
         #logger.debug(f'time: {_time}')
         # 空き予約のコート名を取得する
         _court = _tag.find_parent("section").find("h4").contents[1]
-        #logger.debug(f'court: {_court}')
+        # logger.debug(f'court: {_court}')
         # 空き予約の時間帯とコートの両方が除外リストに含まれていない場合のみ空き予約リストに登録する
         # 除外時間帯か確認する
         #_exclude_time_count = len(cfg['exclude_times'])
@@ -353,12 +353,12 @@ def login_proc(cfg, headers, userid, password, logger=None):
     # with open('top01.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # 「ログイン」ボタンをクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form[1]/table/tbody/tr[3]/td/input[4]').click()
+    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form[1]/table/tbody/tr[3]/td/button[2]').click()
     http_req_num += 1
-    # 「ご利用者さまトップ｜八王子市施設予約システム」タイトルが含まれるまで待機する
-    wait.until(EC.title_contains("ご利用者さまトップ｜八王子市施設予約システム"))
+    # 「ご利用者さまトップ | 八王子市施設予約システム」タイトルが含まれるまで待機する
+    wait.until(EC.title_contains("ご利用者さまトップ | 八王子市施設予約システム"))
     # 画面のtitleを確認する
-    assert 'ご利用者さまトップ｜八王子市施設予約システム' in driver.title
+    assert 'ご利用者さまトップ | 八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 現在の予約済み情報を取得する。予約数の上限がないので実装しない(TBD)
@@ -374,7 +374,7 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     # 待機時間を設定する
     wait = WebDriverWait(driver, 10)
     # mypageのURLにリダイレクトされるまで待機する
-    wait.until(EC.url_to_be(cfg['mypage_url']))
+    # wait.until(EC.url_to_be(cfg['mypage_url']))
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # デバック用
@@ -382,14 +382,14 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     # with open('mypage.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # メニューバーの「予約確認／取り消し、抽選の確認／取消し、当選申請」をクリックする
-    #driver.find_element_by_xpath('/html/body/div[1]/article/section[2]/ul/li[2]/form/a').click()
-    driver.find_element(By.XPATH, '/html/body/div[1]/article/section[2]/ul/li[2]/form/a').click()
+    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/ul/li[2]/form/a').click()
     http_req_num += 1
     # 予約一覧ページがDOM上にすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
-    wait.until(EC.title_contains("予約・抽選確認｜八王子市施設予約システム"))
+    wait.until(EC.title_contains("予約・抽選確認 | 八王子市施設予約システム"))
+    # <title>予約・抽選確認 | 八王子市施設予約システム</title>
     # 画面のtitleを確認する
-    assert '予約・抽選確認｜八王子市施設予約システム' in driver.title
+    assert '予約・抽選確認 | 八王子市施設予約システム' in driver.title
     _html = driver.page_source
     # デバック用
     #with open('reserve.html', mode='w', encoding='utf-8', errors='ignore') as f:
@@ -401,9 +401,9 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     http_req_num += 1
     # 検索ページがDOM上にすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
-    wait.until(EC.title_contains("空き状況を検索｜八王子市施設予約システム"))
+    wait.until(EC.title_contains("空き状況を検索 | 八王子市施設予約システム"))
     # 画面のtitleを確認する
-    assert '空き状況を検索｜八王子市施設予約システム' in driver.title
+    assert '空き状況を検索 | 八王子市施設予約システム' in driver.title
     return driver, mouse, reserved_list
 
 # 予約一覧リストから予約情報を取得する
@@ -496,9 +496,9 @@ def go_to_datesearch(driver, mouse, cfg, logger=None):
     http_req_num += 1
     # 検索ページがDOM上にすべて表示されるまで待機する
     #wait.until(EC.presence_of_all_elements_located)
-    wait.until(EC.title_contains("空き状況を検索｜八王子市施設予約システム"))
+    wait.until(EC.title_contains("空き状況を検索 | 八王子市施設予約システム"))
     # 画面のtitleを確認する
-    assert '空き状況を検索｜八王子市施設予約システム' in driver.title
+    assert '空き状況を検索 | 八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 空き状況を検索するため、検索条件を入力して、空きコートを表示する
@@ -574,7 +574,7 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[5]/td/input[2]').click()
+    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[5]/td/button[2]').click()
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     sleep(1)
@@ -582,7 +582,7 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     http_req_num += 1
     # 画面のtitleを確認する
-    assert '空き状況を検索｜八王子市施設予約システム' in driver.title
+    assert '空き状況を検索 | 八王子市施設予約システム' in driver.title
     #return cookie, ncforminfo_value
     return driver, mouse
 
@@ -602,13 +602,13 @@ def select_empty_court_and_time(driver, mouse, cfg, time, logger=None):
     # 表示された空きコートの空き時間帯と空き状況カレンダーの空き時間帯の行数を取得する
     ( _time , _row_num ) = get_empty_time_and_row_number(html, cfg, time, logger=logger)
     # 空きコートの空き時間帯のリンクをクリックする
-    _xpath=f'//*[@id="pageTop"]/article/section[3]/article/section[2]/div[2]/div/table/tbody/tr[{_row_num}]/td[2]/form/a'
+    _xpath=f'//*[@id="pageTop"]/article/section[3]/article/section[2]/div[2]/div[1]/table/tbody/tr[{_row_num}]/td[2]/form/a'
     #logger.debug(f'xpath for click: {_xpath}')
     driver.find_element(By.XPATH, f'{_xpath}').click()
     http_req_num += 1
-    wait.until(EC.title_contains("随時予約（確認）｜八王子市施設予約システム"))
+    wait.until(EC.title_contains("随時予約（確認） | 八王子市施設予約システム"))
     # 画面のtitleが予約登録画面であることを確認する
-    assert '随時予約（確認）｜八王子市施設予約システム' in driver.title
+    assert '随時予約（確認） | 八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 検索した空きコートの空き時間帯を取得し、希望時間帯であるかを確認する
@@ -625,14 +625,16 @@ def get_empty_time_and_row_number(html, cfg, time, logger=None):
     #logger.debug(f'html_doc: {soup}')
     # 空き状況カレンダーのテーブルを取得する
     _table = soup.find('table', class_="calTable")
-    #logger.debug(f'calTable: {_table}')
+    # logger.debug(f'calTable: {_table}')
     _tbody = _table.tbody
     # 空き時間帯と表の行数を取得する
     _row_num = 0
     for _tr in _tbody.contents:
+        if str(_tr) == str('\n'):
+            continue
         _row_num += 1
-        _time = _tr.contents[0].string
-        _status = _tr.contents[1].string
+        _time = _tr.contents[1].contents[0].strip()
+        _status = _tr.contents[3].contents[0]
         # 空き時間帯でないなら次の時間帯に移動する
         if str(_status) == '×' or str(_status) == '休':
             logger.debug(f'not empty time: {_time}')
@@ -660,14 +662,14 @@ def entry_reserve(driver, mouse, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # 利用目的を選択する
-    f_purpose = wait.until(EC.presence_of_element_located((By.ID, "purpose")))
-    f_purpose = wait.until(EC.element_to_be_clickable((By.ID, "purpose")))
+    f_purpose = wait.until(EC.presence_of_element_located((By.ID, "reserve-register-purpose")))
+    f_purpose = wait.until(EC.element_to_be_clickable((By.ID, "reserve-register-purpose")))
     f_purpose.click()
     #logger.debug(f'f_purpose: {f_purpose}')
     try:
         Select(f_purpose).select_by_value(f'{_purpose}')
     except exceptions.StaleElementReferenceException:
-        f_facility = wait.until(EC.presence_of_element_located((By.ID, "purpose")))
+        f_facility = wait.until(EC.presence_of_element_located((By.ID, "reserve-register-purpose")))
         Select(f_purpose).select_by_value(f'{_purpose}')
     except:
         pass
@@ -676,15 +678,15 @@ def entry_reserve(driver, mouse, logger=None):
     # 利用目的フィールドに硬式テニスの値を選択する
     #f_purpose.select_by_value(f'{_purpose}')
     # 「申込」ボタンをクリックする
-    f_entry = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/input[4]')))
+    f_entry = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/button[2]')))
     # reCHAPTCHAでインターセプトされて、下記のアラームが発生することがあるため、click()をやめる
     # selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted:
-    #f_entry.click()
+    # f_entry.click()
     driver.execute_script("arguments[0].click();", f_entry)
     http_req_num += 1
-    wait.until(EC.title_contains("随時予約（完了）｜八王子市施設予約システム"))
+    wait.until(EC.title_contains("随時予約（完了） | 八王子市施設予約システム"))
     # 随時予約（完了）画面であることを確認する
-    assert '随時予約（完了）｜八王子市施設予約システム' in driver.title
+    assert '随時予約（完了） | 八王子市施設予約システム' in driver.title
     return driver, mouse
 
 # 空き状況の検索ページへ戻る
@@ -764,7 +766,7 @@ def main_search_empty_reserves():
     ## メッセージ本体を作成する
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     #exit()
     return cfg, logger, threadsafe_list.reserves_list, target_months_list, public_holiday, headers
 
@@ -901,7 +903,8 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
                         message_bodies = []
                         message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        # reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
+                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # 空き状況の検索ページへ戻る
                         ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=logger)
             # クローラーのWEBブラウザを終了する
