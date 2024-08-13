@@ -9,7 +9,7 @@ services:
         CHROME_VERSION: ${CHROME_VERSION:-127.0.6533.99}
         TARGET_DOWNLOAD_URL: ${TARGET_DOWNLOAD_URL:-}
         CHROMEDRIVER_DOWNLOAD_URL: ${CHROMEDRIVER_DOWNLOAD_URL:-}
-    image: amzlx2023/webscribe
+    image: lambda_with_amzlx2023_selenium
     container_name: amzlx2024_webscribe
     privileged: true
     # restart: always

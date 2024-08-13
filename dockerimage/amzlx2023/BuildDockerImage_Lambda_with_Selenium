@@ -8,8 +8,6 @@ source ./GetLatestChromeVersion.sh
 # echo "TARGET_DOWNLOAD_URL:        ${TARGET_DOWNLOAD_URL}"
 # echo "CHROMEDRIVER_DOWNLOAD_URL:  ${CHROMEDRIVER_DOWNLOAD_URL}"
 
-# exit 0
-
 # あれば、追加の環境変数を設定する
 
 # docker compose で、Lambda 用の Selenium + Chrome-headless-shell の
