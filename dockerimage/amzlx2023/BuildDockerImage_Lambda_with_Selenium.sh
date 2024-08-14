@@ -12,4 +12,4 @@ source ./GetLatestChromeVersion.sh
 
 # docker compose で、Lambda 用の Selenium + Chrome-headless-shell の
 # WEB スクライブ用 Docker イメージを作成する
-docker compose -f ./docker-compose.yml up --build -d
+docker compose -f ./docker-compose.yml up --build
