@@ -1,0 +1,31 @@
+services:
+  webscribe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MY_CHROME_VERSION: ${MY_CHROME_VERSION:-127.0.6533.99}
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-127.0.6533.99}
+        CHROME_VERSION: ${CHROME_VERSION:-127.0.6533.99}
+        TARGET_DOWNLOAD_URL: ${TARGET_DOWNLOAD_URL:-}
+        CHROMEDRIVER_DOWNLOAD_URL: ${CHROMEDRIVER_DOWNLOAD_URL:-}
+    image: lambda_whith_python3.12_selenium_machida
+    container_name: lambda_webscribe_machida
+    privileged: true
+    # restart: always
+    # user: 1000:1000
+    # volumes:
+    #   - type: bind
+    #     source: ./web-reserve-search
+    #     target: /web-reserve-search
+    #   - type: bind
+    #     source: /root/.aws
+    #     target: /root/.aws
+    #   - type: bind
+    #     source: /root/.ssh
+    #     target: /root/.ssh
+    #   - type: bind
+    #     source: /root/.gitconfig
+    #     target: /root/.gitconfig
+    # install cron job schedule for root : このコマンドを実行して終了してしまうからコメントアウトした
+    # command: crontab -u root /web-reserve-search/server/cron.d/root.cron
