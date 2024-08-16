@@ -34,6 +34,7 @@ RUN dnf install wget \
     openssl-devel \
     bzip2-devel \
     libffi-devel \
+    gcc \
     # python3.11 のインストール
     python3.11 \
     python3.11-pip \

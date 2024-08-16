@@ -83,7 +83,7 @@ def setup_driver():
     """
     # WEB request header
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.6533.119 Safari/537.36'
     }
     # Chromeを指定する
     chromedriver_location = '/usr/lib64/chromium-browser/chromedriver'
@@ -94,6 +94,14 @@ def setup_driver():
     # Docker+Python3の場合に必要
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument(f'--user-agent={headers["User-Agent"]}')
+    # Lambda の Docker イメージの場合は必要
+    options.add_argument('--single-process')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--window-size=1280x1696')
+    options.add_argument('--user-data-dir=/tmp/user-data')
+    options.add_argument('--data-path=/tmp/data-path')
+    options.add_argument('--homedir=/tmp')
+    options.add_argument('--disk-cache-dir=/tmp/cache-dir')
     options.binary_location = '/usr/lib64/chromium-browser/headless_shell'
     # GUIによるデバッグ用。GUIでデバックする場合はこちらを選択する
     #options.binary_location = '/usr/bin/chromium-browser'
@@ -380,7 +388,7 @@ def prepare_serch_empty_reserves(cfg_filename="cfg.json"):
     # 祝日の初期化
     public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    reserve_tools.set_public_holiday('/tmp/public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
     #cfg = reserve_tools.read_json_cfg('cfg.json')
     cfg = reserve_tools.read_json_cfg(cfg_filename)
@@ -440,8 +448,10 @@ def main(event, context):
     """
     mainルーチン
     """
+    # /tmpファイルに設定ファイルがあるか確認し、なければS3からファイルをダウンロードする
+    reserve_tools.is_exist_files('nissy-jp-input', 'webscribe/tennis_reserve_search/machida/cfg_lambda.json', 'webscribe/tennis_reserve_search/common/public_holiday.json')
     # 事前準備
-    ( cfg, logger, date_list ) = prepare_serch_empty_reserves(cfg_filename="cfg.json")
+    ( cfg, logger, date_list ) = prepare_serch_empty_reserves(cfg_filename="/tmp/cfg_lambda.json")
     logger.info(f'starting to search empty reserve.')
     # 同時実行数
     threads = cfg['threads_num']
@@ -460,21 +470,3 @@ if __name__ == '__main__':
     main(event, context)
     exit(0)
     
-    # 実行時間を測定する
-    _start = time.time()
-    # 事前準備
-    ( cfg, logger, date_list ) = prepare_serch_empty_reserves(cfg_filename="cfg.json")
-    logger.info(f'starting to search empty reserve.')
-    # 同時実行数
-    threads = cfg['threads_num']
-    # 検索対象年月日を指定して、空き年月日のHTMLボディを取得する
-    threadsafe_list = main_search_empty_reserves(cfg, date_list, threads_num=threads, logger=logger)
-    # 空き検索処理の事後処理
-    postproc_search_empty_reserves(cfg, threadsafe_list, logger=logger)
-    # デバッグ用(HTTPリクエスト回数を表示する)
-    logger.info(f'HTTP リクエスト数 whole(): {http_req_num} 回数')
-    # 実行時間を表示する
-    elapsed_time = time.time() - _start
-    logger.info(f'whole() duration time: {elapsed_time} sec')
-    
-    exit()

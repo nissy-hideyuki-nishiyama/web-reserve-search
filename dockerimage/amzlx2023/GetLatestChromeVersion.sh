@@ -23,7 +23,7 @@ if [ -f "${JSON_FILE}" ]; then
   rm ${JSON_FILE}
 fi
 
-trap "rm ${JSON_FILE}" 0
+trap "rm ${JSON_FILE}" EXIT
 
 wget -q https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json
 

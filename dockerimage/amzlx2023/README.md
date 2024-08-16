@@ -1,4 +1,4 @@
-# Lambda 用 WEBスクライブ専用Dockerコンテナ
+# WEBスクライブ専用Dockerコンテナ
 ## 経緯
 
 ‐ Chrome が バージョン 112 以降で、GUIモードとヘッドレスモードが統合され、ヘッドレスモードの互換性が向上した
@@ -13,7 +13,14 @@
   ‐ Docker Image Name : lambda_with_amzlx2023_selenium
   - Docker Container Name : amzlx2024_webscribe
 
-## Docker コンテナのビルド
+## 制限事項
+
+‐ Lambda ではマルチスレッドで動作させることができていないため、現在はシングルスレッドで稼働させている
+  ‐ ローカルPCの Docker コンテナ上ではChrome-headless-sell をマルチスレッドで稼働できている
+‐ このため、コードにはスレッド動作のためのコードがあるが、設定ファイル( cfg.json )の thread_num で 1 に制限している
+‐ また、本体コードの Chrome のオプション設定で、options.add_argument('--single-process') を追加している。
+
+## Docker イメージのビルド
 
 1. 所定ディレクトいに移動し、ビルドスクリプトを実行する
 ```bash
@@ -53,18 +60,3 @@ bash-5.2# /usr/lib64/chromium-browser/headless_shell --no-sandbox --disable-gpu 
 ```bash
 bash-5.2# exit
 ```
-
-## WEBスクライブアプリを Dockerイメージに組み込む
-### アプリケーションファイルと関連ファイルを組み込む
-### ローカル環境で動作確認する
-
-## ECR のプライベートリポジトリへの登録
-### ECR のプライベートリポジトリの作成
-### ECR のプライベートリポジトリへの Docker イメージの登録
-
-## Lambda で Dockerイメージを指定して、WEBスクライブを実行する
-
-## Lamdab で 定期的に実行できるように Event Bridge に登録する
-
-
-
