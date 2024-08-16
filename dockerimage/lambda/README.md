@@ -40,6 +40,21 @@ cp app.py config.json site_lambda/app/
 cp requirements.txt site_lambda/
 ```
 
+4. 次のようなディレクトリ構造になっていればよい
+```bash
+./
+├── BuildDockerImage_Lambda_with_Selenium.sh -> ../dockerimage/amzlx2023/BuildDockerImage_Lambda_with_Selenium.sh
+├── DeployDockerImage2Lambda.sh -> ../dockerimage/lambda/DeployDockerImage2Lambda.sh
+├── Dockerfile
+├── GetLatestChromeVersion.sh -> ../dockerimage/amzlx2023/GetLatestChromeVersion.sh
+├── app
+│   ├── check_empty_reserves_multi_threads.py
+│   └── reserve_tools
+│       └── reserve_tools.py
+├── docker-compose.yml
+└── requirements.txt
+```
+
 ## Docker イメージのビルド
 
 1. 所定ディレクトリに移動し、ビルドスクリプトを実行する
