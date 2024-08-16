@@ -10,6 +10,8 @@ from dateutil.relativedelta import relativedelta
 ## ファイルIO、ディレクトリ関連　
 import os
 import sys
+import subprocess
+import pathlib
 
 # 正規表現
 import re
@@ -32,6 +34,13 @@ from logging import (
     DEBUG, INFO, WARNING, ERROR, CRITICAL
 )
 from logging.handlers import RotatingFileHandler
+
+# AWS boto
+import boto3
+import botocore
+
+# S3クライアント
+s3 = boto3.resource('s3')
 
 # 設定ファイルの読み込み
 ## 祝日ファイル
@@ -140,6 +149,44 @@ def save_result_html(response, filename):
     print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(response)
+
+# 設定ファイルや祝日ファイルなど必要なファイルが/tmp以下に存在することを確認する
+def is_exist_files(s3bucket, *args):
+    """
+    設定ファイルと祝日ファイルが存在することを確認する
+    """
+    # ローカルのファイル保存先を指定する
+    for file_s3path in args:
+        # ファイル名のみ抽出する
+        file_name = os.path.basename(file_s3path)
+        file_path = '/tmp/' + file_name
+        # ファイルの存在を確認する
+        if os.path.isfile(file_path):
+            print(f'found {file_path}')
+        else:
+            #print(f'downloading {file_name} from s3.')
+            get_file_from_s3(s3bucket, file_s3path)
+
+# 設定ファイルと祝日ファイルなど必要なファイルをS3バケットから取得し、/tmpディレクトリに保存する
+def get_file_from_s3(s3bucket, file_s3path):
+    """
+    設定ファイルと祝日ファイルを所定のS3バケットから取得し、/tmpディレクトリに保存する
+    """
+    # バケット名とファイルパスを設定する
+    bucket_name = s3bucket
+    key = file_s3path
+    file_name = os.path.basename(file_s3path)
+    # ローカルのファイル保存先を指定する
+    file_path = '/tmp/' + file_name
+    # S3からファイルをダウンロードする
+    try:
+        bucket = s3.Bucket(bucket_name)
+        bucket.download_file(key, file_path)
+        print(subprocess.run(["ls", "-l", "/tmp" ], stdout=subprocess.PIPE))
+        print(f'downloaded {file_name} from s3bucket:{file_s3path}')
+        return
+    except Exception as e:
+        print(e)
 
 # 年越し処理
 def check_new_year(month):
