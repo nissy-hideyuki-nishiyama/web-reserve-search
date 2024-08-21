@@ -91,6 +91,8 @@ def setup_driver():
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--window-size=1280x1696')
     # Docker+Python3の場合に必要
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument(f'--user-agent={headers["User-Agent"]}')
