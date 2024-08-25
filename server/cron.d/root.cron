@@ -1,7 +1,7 @@
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
 DISPLAY=:0
 # chrome版で、AWS Lambdaに移行しているので今は使わない
-##0 0-15,23 * * *       sleep 10 && cd /web-reserve-search/martgd_local && ../.venv/bin/python3 ./check_empty_reserves.py
+##0 0-15,23 * * *       sleep 10 && cd /web-reserve-search/martgd && ../.venv/bin/python3 ./check_empty_reserves.py
 # メインをマルチスレッド版に変更する
 #3-58/5 0-15,23 * * *   sleep 5 && cd /web-reserve-search/hachioji && ../.venv/bin/python3 ./check_empty_reserves_multi_thread.py
 # 予約処理を追加したバージョン
