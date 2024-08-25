@@ -6,7 +6,9 @@
 # これは常時稼働コンテナのserverコンテナのDockerイメージをビルドし、serverコンテナを登録するものである
 # 前提条件
 #  ‐ https://github.com/nissy-hideyuki-nishiyama/web-reserve-search　にアクセス権があること
-#  - Ubuntu 22.04 LTS を稼働しているPCがあり、Dockerがインストールされていること
+#  - Ubuntu 22.04 LTS を稼働しているPCがあり、下記のパッケージがインストールされていること
+#    ‐ docker-ce, docker-ce-cli, docker-ce-root, docker-compose, docker-compose-plugin
+#    ‐ python3.12, python3.12-venv
 #  ‐ このPC＆Ubuntuにコンソールログインできること
 #  ‐ Do
 # 事前準備:
@@ -38,7 +40,7 @@ WORK_DIR="$(pwd)"
 echo "WORK_DIR: ${WORK_DIR}"
 
 # 正常終了後の処理
-trap "rm -f ${WORK_DIR}/app/requirements.txt && rm -rf ${WORK_DIR}/app/reserve_tools" EXIT
+# trap "rm -f ${WORK_DIR}/app/requirements.txt && rm -rf ${WORK_DIR}/app/reserve_tools" EXIT
 
 # 事前準備
 ## ビルド前の準備
@@ -61,9 +63,13 @@ deactivate
 echo "copy config to target site directory."
 for site_name in ${TARGET_SITE_DIRS[@]}
 do
-    cp "${WORK_DIR}/config/${site_name}/*" "${WORK_DIR}/${site_name}/"
-    ln -s "${WORK_DIR}/reserve_tools/public_holiday.json" "${WORK_DIR}/${site_name}/public_holiday.json"
-    ln -s "${WORK_DIR}/reserve_tools" "${WORK_DIR}/${site_name}/reserve_tools"
+    cp -rf "${WORK_DIR}/config/${site_name}"/* "${WORK_DIR}/${site_name}/"
+    if [ ! -h "${WORK_DIR}/${site_name}/public_holiday.json" ];
+        ln -s "${WORK_DIR}/reserve_tools/public_holiday.json" "${WORK_DIR}/${site_name}/public_holiday.json"
+    fi
+    if [ ! -h "${WORK_DIR}/${site_name}/reserve_tools" ];
+        ln -s "${WORK_DIR}/reserve_tools" "${WORK_DIR}/${site_name}/reserve_tools"
+    fi
 done
 
 # Dockerイメージのビルド
