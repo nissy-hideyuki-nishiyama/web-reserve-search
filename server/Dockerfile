@@ -2,6 +2,8 @@ FROM amazonlinux:2023
 
 # Chromiumの安定版のバージョンを取得する
 ARG CHROMEDRIVER_DOWNLOAD_URL
+ARG PYTHON3_VERSION
+
 
 # yum update & install
 RUN dnf update -y \
@@ -18,6 +20,14 @@ RUN dnf update -y \
 
 # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
 RUN dnf groupinstall "Development Tools" -y
+
+# python3.12のビルド＆インストール /usr/local/bin/python3.12 としてインストールされる
+RUN cd /distfiles \
+    && wget https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tgz \
+    && tar zxvf Python-3.12.5.tgz \
+    && cd Python-${PYTHON3_VERSION} \
+    && ./configure --with-ensurerpip --enable-optimizations \
+    && make && make install
 
 # running daemon service
 # RUN systemctl enable rsyslog.service \

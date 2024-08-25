@@ -83,9 +83,6 @@ source "${WORK_DIR}/server/build/GetLatestChromeVersion.sh"
 
 # docker compose で、Lambda 用の Selenium + Chrome-headless-shell の
 # WEB スクライブ用 Docker イメージを作成する
-cd "${WORK_DIR}/server/"
-docker compose -f ./docker-compose.yml build
-
-cd "${WORK_DIR}"
+docker compose -f "${WORK_DIR}/server/docker-compose.yml" up --build -d
 
 exit 0
