@@ -32,11 +32,11 @@ echo "make python venv environment"
 cd "${ROOT_DIR}"
 /usr/local/bin/python3 -m venv "${VENV_DIR}"
 # shellcheck source=src/util.sh
-source "${WORK_DIR}/${PYTHON_VENV_DIR}/bin/activate"
+source "${ROOT_DIR}/${PYTHON_VENV_DIR}/bin/activate"
 
 # 必要なPIPパッケージをインストールする
 echo "install pip package for web scribing."
-pip3 install -r "${WORK_DIR}/tama_lambda/requirements.txt"
+pip3 install -r "${ROOT_DIR}/tama_lambda/requirements.txt"
 pip-review --auto
 
 # cronジョブをインストールする
