@@ -40,7 +40,7 @@
 - $HOME/workddir/develop/web-reserve-search/server/ 以下のdocker-compose.ymlとDockerfileでコンテナを起動する
 - AmazonLinux 2023 のDockerイメージ
 - Dockerイメージのタグ: amazonlinux2023/webscribe_prod:latest
-- Dockerコンテナ名: prod_amzlx2023
+- Dockerコンテナ名: prod_amzlx2024
 
 ### 常時稼働型コンテナのビルドと起動
 
@@ -49,7 +49,7 @@
 1. 下記のコマンドをホストOS上で実行し、「/prod_amzlx2023 always」と表示されることを確認する。
 ```bash
 $ docker inspect -f "{{.Name}} {{.HostConfig.RestartPolicy.Name}}" $(docker ps -aq) | grep always
-/prod_amzlx2023 always
+/prod_amzlx2024 always
 $
 ```
 2. 表示されたコンテナは常時稼働型コンテナとして、自動起動に登録されていることになる

@@ -7,12 +7,15 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-127.0.6533.72}
-    image: amazonlinux2023/webscribe_prod:latest
-    container_name: prod_amzlx2023
+        CHROME_VERSION: ${CHROME_VERSION:-127.0.6613.84}
+        CHROME_DRIVER_VERSION: ${CHROME_DRIVER_VERSION:-127.0.6613.84}
+        TARGET_DOWNLOAD_URL: ${TARGET_DOWNLOAD_URL:-}
+        CHROMEDRIVER_DOWNLOAD_URL: ${CHROMEDRIVER_DOWNLOAD_URL:-}
+    image: amazonlinux2023/webscribe_prod2024:latest
+    container_name: prod_amzlx2024
     privileged: true
-    restart: always
-    #user: 1000:1000
+    # restart: always
+    # user: 1000:1000
     volumes:
       - type: bind
         source: ./web-reserve-search
