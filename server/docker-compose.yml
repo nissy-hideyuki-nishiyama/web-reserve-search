@@ -20,7 +20,7 @@ services:
     # user: 1000:1000
     volumes:
       - type: bind
-        source: ${WORK_DIR}
+        source: ../
         target: /web-reserve-search
       - type: bind
         source: /root/.aws
