@@ -30,7 +30,7 @@ mkdir -p /var/log/webscribe
 # python の venv　環境を作成する。コンテナ内のpython3.12.xをしていして、venvを作成する
 echo "make python venv environment"
 cd "${ROOT_DIR}"
-/usr/local/bin/python3 -m venv "${VENV_DIR}"
+/usr/local/bin/python3 -m venv "${PYTHON_VENV_DIR}"
 # shellcheck source=src/util.sh
 source "${ROOT_DIR}/${PYTHON_VENV_DIR}/bin/activate"
 
