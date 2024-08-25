@@ -77,12 +77,15 @@ done
 ## Chromeの最新バージョン情報を取得し、環境変数に設定する
 echo "Get Latest Chrome Version Info."
 # shellcheck source=src/util.sh
-source "${WOR_KDIR}/server/build/GetLatestChromeVersion.sh"
+source "${WORK_DIR}/server/build/GetLatestChromeVersion.sh"
 
 # あれば、追加の環境変数を設定する
 
 # docker compose で、Lambda 用の Selenium + Chrome-headless-shell の
 # WEB スクライブ用 Docker イメージを作成する
+cd "${WORK_DIR}/server/"
 docker compose -f ./docker-compose.yml build
+
+cd "${WORK_DIR}"
 
 exit 0
