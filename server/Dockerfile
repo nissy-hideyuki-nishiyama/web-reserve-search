@@ -52,7 +52,7 @@ RUN cd /distfiles \
 
 # install chromedriver
 RUN cd /distfiles \
-    && sudo wget {CHROMEDRIVER_DOWNLOAD_URL} \
+    && sudo wget ${CHROMEDRIVER_DOWNLOAD_URL} \
     && unzip ./chromedriver-linux64.zip \
     && ln -s /distfiles/chromedriver-linux64/chromedriver /usr/lib64/chromium-browser/chromedriver \
     && rm ./chromedriver-linux64.zip
