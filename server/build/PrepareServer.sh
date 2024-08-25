@@ -17,7 +17,7 @@
 set -xeou
 
 # パラメータ
-VENV_DIR=".venv"
+PYTHON_VENV_DIR=".venv"
 ROOT_DIR="/web-reserve-search"
 
 # 実行環境の値を取得する
