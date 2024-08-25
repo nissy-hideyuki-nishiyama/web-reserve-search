@@ -21,14 +21,6 @@ RUN dnf update -y \
 # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
 RUN dnf groupinstall "Development Tools" -y
 
-# python3.12のビルド＆インストール /usr/local/bin/python3.12 としてインストールされる
-RUN cd /distfiles \
-    && wget https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tgz \
-    && tar zxvf Python-3.12.5.tgz \
-    && cd Python-${PYTHON3_VERSION} \
-    && ./configure --with-ensurerpip --enable-optimizations \
-    && make && make install
-
 # running daemon service
 # RUN systemctl enable rsyslog.service \
 #     && systemctl start rsyslog.service \
@@ -40,6 +32,14 @@ RUN cd /distfiles \
 # make work directory
 RUN sudo mkdir -p /distfiles && sudo chmod 755 /distfiles \
     && sudo mkdir -p /var/log/webscribe
+
+# python3.12のビルド＆インストール /usr/local/bin/python3.12 としてインストールされる
+RUN cd /distfiles \
+    && wget https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tgz \
+    && tar zxvf Python-3.12.5.tgz \
+    && cd Python-${PYTHON3_VERSION} \
+    && ./configure --with-ensurerpip --enable-optimizations \
+    && make && make install
 
 # install aws cli v2
 RUN cd /distfiles \
