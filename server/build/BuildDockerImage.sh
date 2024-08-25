@@ -51,14 +51,14 @@ if [ -d "${WORK_DIR}/${PYTHON_VENV_DIR}" ]; then
     rm -rf "${WORK_DIR}/${PYTHON_VENV_DIR:?}"
 fi
 echo "make new python venv environment."
-python3.12 -m venv "${WORK_DIR}/${PYTHON_VENV_DIR}"
+# python3.12 -m venv "${WORK_DIR}/${PYTHON_VENV_DIR}"
 # shellcheck source=src/util.sh
-source "${WORK_DIR}/${PYTHON_VENV_DIR}/bin/activate"
+# source "${WORK_DIR}/${PYTHON_VENV_DIR}/bin/activate"
 
 echo "install pip packages with tama_lambda/requirements.txt"
-pip3 install -r "${WORK_DIR}/tama_lambda/requirements.txt"
-pip-review --auto
-deactivate
+# pip3 install -r "${WORK_DIR}/tama_lambda/requirements.txt"
+# pip-review --auto
+# deactivate
 
 ## 共通ライブラリの reserve_tools/ の reserve_tools.py public_holiday.json court_map.json menu_map.json
 echo "copy config to target site directory."
