@@ -1,54 +1,25 @@
 FROM amazonlinux:2023
 
 # Chromiumの安定版のバージョンを取得する
-ARG MY_CHROME_DRIVER_VERSION
-ENV CHROME_DRIVER_VERSION=${MY_CHROME_DRIVER_VERSION}
+ARG CHROMEDRIVER_DOWNLOAD_URL
+ARG PYTHON3_VERSION
+
 
 # yum update & install
 RUN dnf update -y \
     && dnf install \
-        procps-ng \
-        systemd \
-        tar \
-        unzip \
-        sudo \
-        zip \
+        # コンテナビルドに必要なパッケージ
+        tar unzip sudo zip git python3-pip wget jq python3.11 python3.11-pip python3.11-setuptools \
+        # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
+        openssl openssl-devel bzip2-devel libffi-devel \
+        # 常時稼働コンテナして必要なパッケージ
+        procps-ng systemd cronie crontabs man-db-cron rpm-cron logrotate rsyslog rsyslog-logrotate sysstat \
+        # 保守のために必要なパッケージ
+        screen tree iperf3 iproute vim \
         -y
-
-# custom installed packages
-RUN dnf install wget \
-    iproute \
-    screen \
-    tree \
-    iperf3 \
-    git \
-    vim \
-    python3-pip \
-    jq \
-    # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
-    openssl \
-    openssl-devel \
-    bzip2-devel \
-    libffi-devel \
-    -y
 
 # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
 RUN dnf groupinstall "Development Tools" -y
-
-# custom installed packages for running server
-RUN dnf install \
-    cronie \
-    crontabs \
-    man-db-cron \
-    rpm-cron \
-    logrotate \
-    rsyslog \
-    rsyslog-logrotate \
-    sysstat \
-    python3.11 \
-    python3.11-pip \
-    python3.11-setuptools \
-    -y
 
 # running daemon service
 # RUN systemctl enable rsyslog.service \
@@ -61,6 +32,14 @@ RUN dnf install \
 # make work directory
 RUN sudo mkdir -p /distfiles && sudo chmod 755 /distfiles \
     && sudo mkdir -p /var/log/webscribe
+
+# python3.12のビルド＆インストール /usr/local/bin/python3.12 としてインストールされる
+RUN cd /distfiles \
+    && wget https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tgz \
+    && tar zxvf Python-3.12.5.tgz \
+    && cd Python-${PYTHON3_VERSION} \
+    && ./configure --with-ensurerpip --enable-optimizations \
+    && make && make install
 
 # install aws cli v2
 RUN cd /distfiles \
@@ -83,7 +62,7 @@ RUN cd /distfiles \
 
 # install chromedriver
 RUN cd /distfiles \
-    && sudo wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip \
+    && sudo wget ${CHROMEDRIVER_DOWNLOAD_URL} \
     && unzip ./chromedriver-linux64.zip \
     && ln -s /distfiles/chromedriver-linux64/chromedriver /usr/lib64/chromium-browser/chromedriver \
     && rm ./chromedriver-linux64.zip

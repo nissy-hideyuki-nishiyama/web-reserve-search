@@ -1,13 +1,13 @@
 # ビルドステージ
 FROM public.ecr.aws/lambda/python:3.12 AS builder
 
-# Docker コンテナに必要なパッケージのビルドに必要なビルドツールをインストールする
+# Docker コンテナのビルドに必要なパッケージとビルドツールをインストールする
 RUN dnf update -y \
-&& dnf install \
-    procps-ng systemd sudo tree vim \
-    tar unzip zip git jq gcc wget \
-    openssl openssl-devel libffi-devel \
-    -y
+    && dnf install \
+        procps-ng systemd sudo tree vim \
+        tar unzip zip git jq gcc wget \
+        openssl openssl-devel libffi-devel \
+        -y
 
 # Pythonのパッケージマネージャを最新化する
 COPY ./requirements.txt ./

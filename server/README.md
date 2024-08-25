@@ -39,8 +39,8 @@
 
 - $HOME/workddir/develop/web-reserve-search/server/ 以下のdocker-compose.ymlとDockerfileでコンテナを起動する
 - AmazonLinux 2023 のDockerイメージ
-- Dockerイメージのタグ: amazonlinux2023/webscribe_prod:latest
-- Dockerコンテナ名: prod_amzlx2023
+- Dockerイメージのタグ: amazonlinux2023/webscribe_prod2024:latest
+- Dockerコンテナ名: prod_amzlx2024
 
 ### 常時稼働型コンテナのビルドと起動
 
@@ -49,7 +49,7 @@
 1. 下記のコマンドをホストOS上で実行し、「/prod_amzlx2023 always」と表示されることを確認する。
 ```bash
 $ docker inspect -f "{{.Name}} {{.HostConfig.RestartPolicy.Name}}" $(docker ps -aq) | grep always
-/prod_amzlx2023 always
+/prod_amzlx2024 always
 $
 ```
 2. 表示されたコンテナは常時稼働型コンテナとして、自動起動に登録されていることになる
@@ -62,6 +62,53 @@ $ systemctl status
 $ crontab -l # rootアカウントで登録されたcronジョブを表示し、期待したスケジュールが登録されていればよい
 $
 ```
+
+#### 常時稼働型コンテナのコンテナイメージのビルド
+
+1. (Ubuntu:) 作業ディレクトリ($HOME/workdir/webscribe)に移動し、gitリポジトリをCloneする
+```bash
+$ cd ~/workdir/webscribe
+$ git clone git@github.com:nissy-hideyuki-nishiyama/web-reserve-search.git
+
+$ cd web-reserve-search
+$ git checkout main
+$ git pull
+```
+
+2. (Ubuntu:) server/build/ ディレクトリ以下のビルドスクリプトを指定して実行する。WEBスクライブ対象の設定ファイルのコピーとコンテナイメージのビルドおよびコンテナ起動をする
+```bash
+$ cd ~/workdir/webscribe/web-reserve-search
+$ bash ./server/build/BuildDockerImage.sh
+```
+
+#### 常時稼働型コンテナの起動準備
+
+1. (Ubuntu:) 上記に起動した Docker コンテナにログインする
+```bash
+$ docker container list --all
+$ docker exec -it {container_id} /bin/bash
+```
+
+2. (Container:) サーバ起動のための事前準備を行う。必要なディレクトリの作成や python の venv 環境の作成、cron ジョブファイルを作成する。
+これらをまとめて実施するスクリプトがあるので、これを実行する
+```bash
+# cd /web-reserve-search
+# bash server/build/PrepareServer.sh
+```
+
+3. (Container:) サーバの動作確認をする
+```bash
+# systemctl status
+# crontab -l 
+# ps aux
+# top
+# ls -l /var/log/webscribe/*
+# tail -30 /var/log/webscribe/*
+# tail -f /var/log/cron
+```
+
+------
+これ以降は、2024年8月以前のもの
 
 #### 常時稼働型コンテナのコンテナイメージのビルド
 
