@@ -11,7 +11,7 @@ RUN dnf update -y \
         # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
         openssl openssl-devel bzip2-devel libffi-devel \
         # 常時稼働コンテナして必要なパッケージ
-        procps-ng systemd cronie crontabs man-db-cron rpm-cron logroatte rsyslog rsyslog-logrotate sysstat \
+        procps-ng systemd cronie crontabs man-db-cron rpm-cron logrotate rsyslog rsyslog-logrotate sysstat \
         # 保守のために必要なパッケージ
         screen tree iperf3 iproute vim \
         -y
