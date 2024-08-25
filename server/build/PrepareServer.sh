@@ -27,6 +27,13 @@ echo "CURRENT_DIR: ${CURRENT_DIR}"
 # ログディレクトリを作成する
 mkdir -p /var/log/webscribe
 
+## 全プログラムで利用する python のvenv環境を作成する
+echo "making python venv environment to use all webscribe programs."
+if [ -d "${ROOT_DIR}/${PYTHON_VENV_DIR}" ]; then
+    echo "found Older python venv directory. delete older python venv directory"
+    rm -rf "${ROOT_DIR}/${PYTHON_VENV_DIR:?}"
+fi
+
 # python の venv　環境を作成する。コンテナ内のpython3.12.xをしていして、venvを作成する
 echo "make python venv environment"
 cd "${ROOT_DIR}"

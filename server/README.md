@@ -75,14 +75,10 @@ $ git checkout main
 $ git pull
 ```
 
-2. (Ubuntu:) 常時稼働型コンテナのdocker-compose.ymlとDockerfile、cronjobファイルを作業ディレクトリにコピーする(bindがうまく解決できなかった)
+2. (Ubuntu:) server/build/ ディレクトリ以下のビルドスクリプトを指定して実行する。WEBスクライブ対象の設定ファイルのコピーとコンテナイメージのビルドおよびコンテナ起動をする
 ```bash
 $ cd ~/workdir/webscribe/web-reserve-search
-```
-
-3. (Ubuntu:) serverディレクトリのdocker-compose.ymlを指定して、docker-composeコマンドで常時稼働型コンテナイメージをビルドする
-```bash
-$ docker compose -f server/docker-compose.yml up --build -d
+$ bash ./server/build/BuildDockerImage.sh
 ```
 
 #### 常時稼働型コンテナの起動準備

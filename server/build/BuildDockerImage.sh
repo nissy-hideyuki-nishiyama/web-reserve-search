@@ -33,7 +33,6 @@ TARGET_SITE_DIRS=(
     martgd
     tama
 )
-PYTHON_VENV_DIR=".venv"
 
 # 実行環境の値を取得する
 WORK_DIR="$(pwd)"
@@ -43,23 +42,6 @@ echo "WORK_DIR: ${WORK_DIR}"
 # trap "rm -f ${WORK_DIR}/app/requirements.txt && rm -rf ${WORK_DIR}/app/reserve_tools" EXIT
 
 # 事前準備
-## ビルド前の準備
-## 全プログラムで利用する python のvenv環境を作成する
-echo "making python venv environment to use all webscribe programs."
-if [ -d "${WORK_DIR}/${PYTHON_VENV_DIR}" ]; then
-    echo "found Older python venv directory. delete older python venv directory"
-    rm -rf "${WORK_DIR}/${PYTHON_VENV_DIR:?}"
-fi
-echo "make new python venv environment."
-# python3.12 -m venv "${WORK_DIR}/${PYTHON_VENV_DIR}"
-# shellcheck source=src/util.sh
-# source "${WORK_DIR}/${PYTHON_VENV_DIR}/bin/activate"
-
-echo "install pip packages with tama_lambda/requirements.txt"
-# pip3 install -r "${WORK_DIR}/tama_lambda/requirements.txt"
-# pip-review --auto
-# deactivate
-
 ## 共通ライブラリの reserve_tools/ の reserve_tools.py public_holiday.json court_map.json menu_map.json
 echo "copy config to target site directory."
 for site_name in "${TARGET_SITE_DIRS[@]}"
