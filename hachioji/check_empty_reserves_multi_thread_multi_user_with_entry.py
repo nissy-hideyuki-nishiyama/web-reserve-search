@@ -167,13 +167,15 @@ def selenium_input_datas(driver, input_date, logger=None):
     #wait.until(EC.element_to_be_clickable((By.NAME, "disp_type")))
     #wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "btnSearch js_recaptcha_submit")))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
-    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]")
+    # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
+    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]")
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
     f_period.click()
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
-    driver.find_element(By.XPATH, "//*[@id='pageTop']/article/section[2]/div/form/table/tbody/tr[5]/td/button[2]").click()
+    # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
     #sleep(30)
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
@@ -200,8 +202,8 @@ def get_empty_court_time(cfg, threadsafe_list, date, html, logger=None):
     for _tag in _form:
         # 登録フラグを初期化する。0なら登録対象とする
         _regist_flag = 0
-        # 空き予約の時間帯を取得する 2024/7/28 WEBサイトのCSS変更に伴い修正する
-        _time = _tag.find_parent("tr").find("td", class_="timeZone").contents[0].strip()
+        # 空き予約の時間帯を取得する 2024/10/04 WEBサイトのCSS変更に伴い修正する
+        _time = _tag.find_parent("tr").find("th", class_="timeZone").contents[0].strip()
         #logger.debug(f'time: {_time}')
         # 空き予約のコート名を取得する
         _court = _tag.find_parent("section").find("h4").contents[1]
@@ -355,7 +357,8 @@ def login_proc(cfg, headers, userid, password, logger=None):
     # with open('top01.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # 「ログイン」ボタンをクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form[1]/table/tbody/tr[3]/td/button[2]').click()
+    # ページデザイン変更のため、XPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, '//*[@id="pageTop"]/main/section[2]/div/form[1]/div[2]/p/button[2]').click()
     http_req_num += 1
     # 「ご利用者さまトップ | 八王子市施設予約システム」タイトルが含まれるまで待機する
     wait.until(EC.title_contains("ご利用者さまトップ | 八王子市施設予約システム"))
@@ -384,7 +387,8 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     # with open('mypage.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # メニューバーの「予約確認／取り消し、抽選の確認／取消し、当選申請」をクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/ul/li[2]/form/a').click()
+    # ページデザイン変更によりXPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, '//*[@id="pageTop"]/main/section[2]/ul/li[2]/form/a').click()
     http_req_num += 1
     # 予約一覧ページがDOM上にすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
@@ -399,7 +403,8 @@ def get_current_reserves_list(driver, mouse, cfg, logger=None):
     # 予約情報リストを取得する
     reserved_list = analyze_reserved_list(cfg, _html, logger=logger)
     # ページヘッダーメニューの「随時予約・抽選申込」をクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/header/nav/ul/li[2]/form/a').click()
+    # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, '//*[@id="header-dropdown"]/li[2]/form/a').click()
     http_req_num += 1
     # 検索ページがDOM上にすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
@@ -425,22 +430,25 @@ def analyze_reserved_list(cfg, html, logger=None):
     soup = BeautifulSoup(html, features='html.parser')
     #logger.debug(f'html_doc: {soup}')
     # 空き状況カレンダーのテーブルを取得する
-    _table = soup.find('table', summary="予約一覧")
+    # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
+    _table = soup.find('table', class_="form-layout2 pc-only")
     #logger.debug(f'SummaryTable: {_table}')
-    _tbody = _table.tbody
-    #logger.debug(f'tbody tag: {_tbody}')
+    # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
+    # 予約がない場合は空のDictを返す
+    if _table is None:
+        return _reserved_list
     # 予約情報を取得する
-    for _tr in _tbody.find_all('tr'):
-        #logger.debug(f'tr tag: {_tr}')
-        _facility = _tr.contents[0].string
-        _court = _tr.contents[1].string
+    for _tbody in _table.find_all('tbody'):
+        _td = _tbody.contents[0]
+        _facility = _td.contents[0].string.rstrip()
+        _court = _td.contents[1].string.rstrip()
         # 施設名とコート名を空白スペースで結合する
         _facility_court = _facility + ' ' + _court
-        _date = _tr.contents[2].string
+        _date = _td.contents[2].string.rstrip()
         _date = _date[:4] + _date[5:7] + _date[8:10]
         #logger.debug(f'date: {_date}')
-        _time = _tr.contents[3].string
-        _status = _tr.contents[4].string
+        _time = _td.contents[3].string.rstrip()
+        _status = _td.contents[4].string.rstrip()
         #logger.debug(f'status: {_status}')
         # 状態が申込でないなら、次の予約情報に移動する
         if str(_status) != '申込':
@@ -494,7 +502,8 @@ def go_to_datesearch(driver, mouse, cfg, logger=None):
     # with open('mypage.html', mode='w', encoding='utf-8', errors='ignore') as f:
     #     f.write(_html)
     # メニューバーの「随時予約・抽選申込」をクリックする
-    driver.find_element(By.XPATH, '/html/body/div[1]/article/section[2]/ul/li[1]/form/a').click()
+    # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, '//*[@id="header-dropdown"]/li[2]/form/a').click()
     http_req_num += 1
     # 検索ページがDOM上にすべて表示されるまで待機する
     #wait.until(EC.presence_of_all_elements_located)
@@ -570,13 +579,15 @@ def display_target_reserve(driver, mouse, date, facility_id, court_id, logger=No
     # 開始日フィールドに指定日を入力する
     f_date.send_keys(str(_date))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
-    f_period = driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[4]/td/table/tbody/tr[2]/td/div/label[1]')
+    # デザイン変更に伴い、XPATHを修正する(2024/10/4)
+    f_period = driver.find_element(By.XPATH, '//*[@id="pageTop"]/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]')
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
     f_period.click()
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section[2]/div/form/table/tbody/tr[5]/td/button[2]').click()
+    # デザイン変更に伴い、XPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, '//*[@id="pageTop"]/main/section[2]/div/form/div[2]/div[1]/p/button[2]').click()
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     sleep(1)
@@ -604,10 +615,12 @@ def select_empty_court_and_time(driver, mouse, cfg, time, logger=None):
     # 表示された空きコートの空き時間帯と空き状況カレンダーの空き時間帯の行数を取得する
     ( _time , _row_num ) = get_empty_time_and_row_number(html, cfg, time, logger=logger)
     # 空きコートの空き時間帯のリンクをクリックする
-    _xpath=f'//*[@id="pageTop"]/article/section[3]/article/section[2]/div[2]/div[1]/table/tbody/tr[{_row_num}]/td[2]/form/a'
+    # デザイン変更に伴い、XPATHを修正する(2024/10/4)
+    _xpath=f'//*[@id="pageTop"]/main/section[3]/article/section[2]/table/tbody/tr[{_row_num}]/td/form/a'
     #logger.debug(f'xpath for click: {_xpath}')
     driver.find_element(By.XPATH, f'{_xpath}').click()
     http_req_num += 1
+    # wait.until(EC.title_contains("随時予約（確認） | 八王子市施設予約システム"))
     wait.until(EC.title_contains("随時予約（確認） | 八王子市施設予約システム"))
     # 画面のtitleが予約登録画面であることを確認する
     assert '随時予約（確認） | 八王子市施設予約システム' in driver.title
@@ -664,14 +677,14 @@ def entry_reserve(driver, mouse, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # 利用目的を選択する
-    f_purpose = wait.until(EC.presence_of_element_located((By.ID, "reserve-register-purpose")))
-    f_purpose = wait.until(EC.element_to_be_clickable((By.ID, "reserve-register-purpose")))
+    f_purpose = wait.until(EC.presence_of_element_located((By.ID, "reserve-register-0-purpose")))
+    f_purpose = wait.until(EC.element_to_be_clickable((By.ID, "reserve-register-0-purpose")))
     f_purpose.click()
     #logger.debug(f'f_purpose: {f_purpose}')
     try:
         Select(f_purpose).select_by_value(f'{_purpose}')
     except exceptions.StaleElementReferenceException:
-        f_facility = wait.until(EC.presence_of_element_located((By.ID, "reserve-register-purpose")))
+        f_facility = wait.until(EC.presence_of_element_located((By.ID, "reserve-register-0-purpose")))
         Select(f_purpose).select_by_value(f'{_purpose}')
     except:
         pass
@@ -680,7 +693,8 @@ def entry_reserve(driver, mouse, logger=None):
     # 利用目的フィールドに硬式テニスの値を選択する
     #f_purpose.select_by_value(f'{_purpose}')
     # 「申込」ボタンをクリックする
-    f_entry = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pageTop"]/article/section/form[1]/table/tbody/tr[7]/td/button[2]')))
+    # デザイン変更に伴い、XPATHを修正する(2024/10/4)
+    f_entry = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="pageTop"]/main/section/form[1]/div[2]/p/button[2]')))
     # reCHAPTCHAでインターセプトされて、下記のアラームが発生することがあるため、click()をやめる
     # selenium.common.exceptions.ElementClickInterceptedException: Message: element click intercepted:
     # f_entry.click()
@@ -703,7 +717,8 @@ def return_to_datesearch(driver, mouse, cfg, logger=None):
     # 検索ページがすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     # メニューバーの「随時予約・抽選申込」をクリックする
-    driver.find_element(By.XPATH, '//*[@id="pageTop"]/article/section/form/nav/a').click()
+    # デザイン変更に伴い、XPATHを修正する(2024/10/4)
+    driver.find_element(By.XPATH, '/html/body/div[1]/div/header/nav/ul/li[2]/form/a').click()
     http_req_num += 1
     return driver, mouse
 
