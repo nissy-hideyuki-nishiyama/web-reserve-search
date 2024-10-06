@@ -147,12 +147,13 @@ def selenium_input_datas(driver, input_date, logger=None):
     検索条件を入力し、空き予約を検索し、検索結果を取得する
     """
     global http_req_num
+    wait = WebDriverWait(driver, 10)
     # selectタイプの指定値
     shisetsuId = 2 # テニスコート
     periodId = 1 # 指定日のみ
-    # DOM上に表示されるまで待機する
     # 検索フォームのフィールド設定
-    wait = WebDriverWait(driver, 10)
+    # DOM上に表示されるまで待機する
+    wait.until(EC.presence_of_all_elements_located)
     f_shisetsu = wait.until(EC.presence_of_element_located((By.NAME, "class")))
     # 分類フィールドで施設を選択する
     Select(f_shisetsu).select_by_index(shisetsuId)
@@ -164,8 +165,8 @@ def selenium_input_datas(driver, input_date, logger=None):
     f_date.send_keys(str(input_date))
     # 期間ラジオボタンで指定開始日のみを選択する
     # クリックできる状態まで待機する
-    #wait.until(EC.element_to_be_clickable((By.NAME, "disp_type")))
-    #wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "btnSearch js_recaptcha_submit")))
+    # wait.until(EC.element_to_be_clickable((By.NAME, "disp_type")))
+    # wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "btnSearch js_recaptcha_submit")))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
     f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]")
@@ -175,7 +176,8 @@ def selenium_input_datas(driver, input_date, logger=None):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
-    driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    # driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
     #sleep(30)
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
