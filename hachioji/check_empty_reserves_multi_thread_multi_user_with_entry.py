@@ -176,8 +176,13 @@ def selenium_input_datas(driver, input_date, logger=None):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
-    # driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
-    driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    # f_btn_search = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]")
+    # f_btn_search = driver.find_element(By.CLASS_NAME, "btnSearch js_recaptcha_submit")
+    # wait.until(EC.element_to_be_clickable(f_btn_search))
+    # f_btn_search.click()
+    # chrome 129 で失敗することが多いので、javvaスクリプトを実行する形に変更する
+    f_btn_search = driver.find_element(By.CLASS_NAME, "btnSearch")
+    driver.execute_script("arguments[0].click();", f_btn_search)
     #sleep(30)
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
