@@ -49,11 +49,14 @@ import async_timeout
 from aiohttp import (
     ClientSession,
     TCPConnector,
-    ClientError
+    ClientError,
+    ClientResponse
 )
 # URLの'/'が問題になるためハッシュ化する
 from hashlib import md5
 from pathlib import Path
+# レスポンスにContent-Type ヘッダーに文字セットが見つからない場合
+from chardetng_py import detect
 
 # ツールライブラリを読み込む
 from reserve_tools import reserve_tools
@@ -124,6 +127,8 @@ def get_empty_court(response, cfg, day, court_link_list, logger=None):
     registerd_link = ''
     ## レスポンスオブジェクトをHTML化する
     html = str(response)
+    # decode_text = response.decode('utf-8')
+    # html = str(decode_text)
     soup = BeautifulSoup(html, features='html.parser')
     # aタグのhref属性を持つタグを抽出する
     for atag in soup.find_all('a'):
@@ -304,7 +309,10 @@ class AsyncioLockReservesList:
 # コルーチンを生成する
 #@reserve_tools.elapsed_time
 async def coroutine(req_obj, response):
-    return req_obj, response.status, await response.text()
+    return req_obj, response.status, await response.text(encoding='utf-8')
+    # return req_obj, response.status, await response.read()
+# async def coroutine(req_obj, response, decode_tetx):
+#     return req_obj, response.status, await decode_tetx
 
 #@reserve_tools.elapsed_time
 async def get_request_fetch(session, coro, req_obj):
@@ -314,10 +322,14 @@ async def get_request_fetch(session, coro, req_obj):
     async with async_timeout.timeout(20):
         try:
             response = await session.get(req_obj[2], headers=req_obj[3], cookies=req_obj[4])
+            # print(f'Response Header Content-Type : ' + response.headers.get('Content-Type'))
+            # バイナリーデータとして取得後、UTF-8でデコードする
+            # decode_text = response.read().decode('utf-8')
         except ClientError as e:
             print(e)
             response = None
     return await coro(req_obj, response)
+    # return await coro(req_obj, response, decode_text)
 
 #@reserve_tools.elapsed_time
 async def bound_get_request_fetch(semaphore, session, coro, req_obj):
@@ -336,7 +348,7 @@ async def get_request_courts(request_objs, coro, limit):
     global http_req_num
     tasks = []
     semaphore = asyncio.Semaphore(limit)
-    async with ClientSession(connector=TCPConnector(ssl=False)) as session:
+    async with ClientSession(connector=TCPConnector(ssl=False), fallback_charset_resolver=charset_resolver) as session:
         for req_obj in request_objs:
             http_req_num += 1
             task = asyncio.ensure_future(bound_get_request_fetch(semaphore, session, coro, req_obj))
@@ -1216,7 +1228,14 @@ def postproc(reserves_list, logger=None):
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
     reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # Discordに空き予約情報のメッセージを送信する
+    reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     return None
+
+# aiohttpの文字コード検出強化
+def charset_resolver(resp: ClientResponse, body: bytes) -> str:
+    tld = resp.url.host.rsplit(".", maxsplit=1)[-1]
+    return detect(body, allow_utf8=True, tld=tld.encode())
 
 if __name__ == '__main__':
     # 実行時間を測定する

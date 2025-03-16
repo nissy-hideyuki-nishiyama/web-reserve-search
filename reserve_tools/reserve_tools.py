@@ -39,6 +39,10 @@ from logging.handlers import RotatingFileHandler
 import boto3
 import botocore
 
+# Discord関連
+import asyncio
+import discord
+
 # S3クライアント
 s3 = boto3.resource('s3')
 
@@ -1054,10 +1058,45 @@ def send_line_notify(message_bodies, token, logger=None):
             sleep(1)
         logger.info(f'sent empty reserves.')
     else:
-        # 空き予約がない場合もメッセージを送信する
+        # 空き予約がない場合はログ出力のみする
         #data = {'message': f'空き予約はありませんでした'}
         #requests.post(line_notify_api, headers = headers, data = data)
         logger.debug(f'not found empty reserves.')
+
+# Discordのチャンネルに空き予約を送信する
+def send_discord_channel(message_bodies, token, channel_id, logger=None):
+    """
+    Discordのチャンネルにメッセージを送信する
+    """
+    # BotのトークンとチャンネルIDを設定する
+    _token = token
+    _channel_id = channel_id
+    
+    # Intentsを設定
+    intents = discord.Intents.default()
+    intents.message_content = True  # メッセージの内容にアクセスするためのIntent
+    
+    # クライアントを作成
+    client = discord.Client(intents=intents)
+
+    @client.event
+    async def on_ready():
+        logger.debug(f'We have logged in as {client.user}')
+        channel = client.get_channel(_channel_id)
+        if channel is not None:
+            if len(message_bodies[0]) > 1:
+                for _message in message_bodies:
+                    await channel.send(f'{_message}')
+                    await asyncio.sleep(1)
+                logger.info(f'sent empty reserves.')
+                await client.close()  # メッセージを送信後にクライアントを閉じる
+            else:
+                # 空き予約がない場合はログ出力のみする
+                logger.debug(f'not found empty reserves.')
+                await client.close()  # メッセージを送信後にクライアントを閉じる
+        else:
+            logger.debug(f'Channel with ID {_channel_id} not found.')
+    client.run(_token)
 
 # 実行時間を計測する
 def elapsed_time(f):
