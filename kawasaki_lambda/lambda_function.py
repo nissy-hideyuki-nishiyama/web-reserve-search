@@ -1416,6 +1416,8 @@ def lambda_handler(event, context):
     message_bodies = reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
     reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # Discordに空き予約情報のメッセージを送信する
+    reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     # 空き予約リストに値があるかないかを判断し、予約処理を開始する
     #print(f'reserves_list: {threadsafe_list.reserves_list}')
     if len(threadsafe_list.reserves_list) == 0:
@@ -1505,6 +1507,8 @@ def lambda_handler(event, context):
                     message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
                     # LINEに送信する
                     reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                    # Discordに空き完了情報のメッセージを送信する
+                    reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_reserved_channel_id'], logger=logger)
                     # 予約件数に1件追加する
                     reserved_num += 1
                 else:
@@ -1532,5 +1536,3 @@ def lambda_handler(event, context):
 #     logger.info(f'whole() duration time: {elapsed_time} sec')
 
 #     exit()
-
-
