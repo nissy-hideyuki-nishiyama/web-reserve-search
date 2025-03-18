@@ -14,6 +14,9 @@ import urllib
 import requests
 from urllib3.util import Retry, timeout
 from requests.adapters import HTTPAdapter
+# TLSv1.2以上で接続するようにする
+from requests.packages.urllib3.poolmanager import PoolManager
+import ssl
 
 # JSONファイルの取り扱い
 import json
@@ -35,6 +38,22 @@ from pathlib import Path
 
 # ツールライブラリを読み込む
 from reserve_tools import reserve_tools
+
+# TLSv1.2以上で接続するようにする
+class TLSAdapter(HTTPAdapter):
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = PoolManager(
+            num_pools=connections,
+            maxsize=maxsize,
+            block=block,
+            ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
+        )
+
+    # session = requests.Session()
+    # session.mount('https://', TLSAdapter())
+    # # 再試行3回、sleep時間1秒、timeout以外でリトライのステータスコード
+    # retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+    # session.mount("https://", HTTPAdapter(max_retries=retries))
 
 # 検索結果ページの表示件数
 page_unit = 5
@@ -164,6 +183,7 @@ def get_cookie_request(cfg, logger=None):
     global http_req_num
     # セッションを開始する
     session = requests.Session()
+    session.mount('https://', TLSAdapter())
     # 再試行3回、sleep時間1秒、timeout以外でリトライのステータスコード
     retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
     session.mount("https://", HTTPAdapter(max_retries=retries))

@@ -2,6 +2,9 @@
 ## HTMLクローラー関連
 import requests
 import urllib
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.poolmanager import PoolManager
+import ssl
 
 ## カレンダー関連
 from time import sleep
@@ -20,6 +23,16 @@ import json
 # ツールライブラリを読み込む
 from reserve_tools import reserve_tools
 
+# TLSv1.2以上で接続するようにする
+class TLSAdapter(HTTPAdapter):
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = PoolManager(
+            num_pools=connections,
+            maxsize=maxsize,
+            block=block,
+            ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
+        )
+
 # HTTPリクエスト数
 http_req_num = 0
 
@@ -32,7 +45,8 @@ def get_cookie(cfg):
     """
     global http_req_num
     # セッションを開始する
-    session = requests.session()
+    session = requests.Session()
+    session.mount('https://', TLSAdapter())
     response = session.get(cfg['first_url'])
     http_req_num += 1
     #response.raise_for_status()
