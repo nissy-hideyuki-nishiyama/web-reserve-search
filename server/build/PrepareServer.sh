@@ -34,7 +34,7 @@ if [ -d "${ROOT_DIR}/${PYTHON_VENV_DIR}" ]; then
     rm -rf "${ROOT_DIR}/${PYTHON_VENV_DIR:?}"
 fi
 
-# python の venv　環境を作成する。コンテナ内のpython3.12.xをしていして、venvを作成する
+# python の venv　環境を作成する。コンテナ内のpython3.12.xを指定して、venvを作成する
 echo "make python venv environment"
 cd "${ROOT_DIR}"
 /usr/local/bin/python3 -m venv "${PYTHON_VENV_DIR}"
