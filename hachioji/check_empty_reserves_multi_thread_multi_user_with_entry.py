@@ -178,8 +178,10 @@ def selenium_input_datas(driver, input_date, logger=None):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
-    # driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
-    driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    # element = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
+    element = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]")
+    driver.execute_script("arguments[0].click();", element)
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     sleep(1)
