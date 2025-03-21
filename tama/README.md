@@ -72,6 +72,10 @@
 - cookie_starturl: 同上
 - cookie_auth: 同上
 - search_params: 同上(奈良原公園(0041)とそれ以外(0040)で検索区分が異なる)
+- discord_token: 同上。通知に利用するDiscordアプリのトークンコード(固定値)を指定する
+- discord_channel_id: 同上。通知先のDiscordチャンネルのチャンネルIDを指定する
+- discord_reserved_channel_id: 同上。予約確定に対する通知先のDiscordチャンネルのチャンネルIDを指定する
+- discord_max_message_size: 同上。Discordの最大文字数(2000文字固定)を指定する
 - exclude_courts: 空き予約コート検索から除外したいコート(一の宮公園)のコードを記述する。コードはコート名とコートのコードの対応ファイル(court_map.json)を参照のこと
 - exclude_times: 空き予約コート検索から除外したい時間帯を指定する
 - line_token: 通知先のLINEグループに参加しているLINE Notifyのトークンコードを指定する

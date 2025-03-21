@@ -11,8 +11,13 @@ bs4==0.0.2
 certifi==2024.7.4
 cffi==1.16.0
 chardet==5.2.0
+# Content-Typeヘッダーが取れない場合に判別するモジュール
+chardetng_py==0.3.3
 charset-normalizer==3.3.2
 cryptography==43.0.0
+# DiscordのAPI
+discord==2.3.2
+discord.py==2.5.2
 exceptiongroup==1.2.2
 frozenlist==1.4.1
 h11==0.14.0

@@ -434,6 +434,8 @@ def postproc_search_empty_reserves(cfg, threadsafe_list, logger=None):
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
     reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # Discordに空き予約情報のメッセージを送信する
+    reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     return None
 
 if __name__ == '__main__':

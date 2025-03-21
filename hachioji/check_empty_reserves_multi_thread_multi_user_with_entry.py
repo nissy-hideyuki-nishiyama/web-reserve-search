@@ -130,14 +130,14 @@ def selenium_post_conditions(driver, date_list, reserves_list, cfg, logger=None)
         # 検索結果をHTMLソースとしてオブジェクトに保存する
         _html = driver.page_source
         # デバッグ用にHTMLファイルを保存する
-        #reserve_tools.save_result_html(_html, f'hachioji_empty_reserves_{f_date}.html')
+        # reserve_tools.save_result_html(_html, f'hachioji_empty_reserves_{f_date}.html')
         #sleep(1)
         # HTML解析を実行し、空き予約名リストを作成する
         get_empty_court_time(cfg, reserves_list, f_date, _html, logger=logger)
         # 条件をクリア ボタンをクリックして、次の検索の準備をする
 
     # 空き予約名リストを表示する
-    #logger.debug(f'Court_Reserve_List:\n{reserves_list}')
+    # logger.debug(f'Court_Reserve_List:\n{reserves_list}')
     return reserves_list
 
 # 検索ページに検索条件を入力して、検索を結果を取得する
@@ -169,21 +169,20 @@ def selenium_input_datas(driver, input_date, logger=None):
     # wait.until(EC.visibility_of_element_located((By.CLASS_NAME, "btnSearch js_recaptcha_submit")))
     # 期間ラジオボタンで「指定開始日のみ」を指定する
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
-    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]")
+    # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
+    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]/input")
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
-    f_period.click()
+    # f_period.click()
+    driver.execute_script("arguments[0].click();", f_period)
     # 画面を最下行までスクロールさせ、全ページを表示する
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
-    # f_btn_search = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]")
-    # f_btn_search = driver.find_element(By.CLASS_NAME, "btnSearch js_recaptcha_submit")
-    # wait.until(EC.element_to_be_clickable(f_btn_search))
-    # f_btn_search.click()
-    # chrome 129 で失敗することが多いので、javvaスクリプトを実行する形に変更する
-    f_btn_search = driver.find_element(By.CLASS_NAME, "btnSearch")
-    driver.execute_script("arguments[0].click();", f_btn_search)
-    #sleep(30)
+    # element = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
+    element = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]")
+    driver.execute_script("arguments[0].click();", element)
+
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     sleep(1)
@@ -791,6 +790,8 @@ def main_search_empty_reserves():
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
     reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # Discordに空き予約情報を送信する
+    reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     #exit()
     return cfg, logger, threadsafe_list.reserves_list, target_months_list, public_holiday, headers
 
@@ -929,6 +930,8 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
                         # LINEに送信する
                         # reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
                         reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                        # Discordに予約完了のメッセージを送信する
+                        reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_reserved_channel_id'], logger=logger)
                         # 空き状況の検索ページへ戻る
                         ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=logger)
             # クローラーのWEBブラウザを終了する
