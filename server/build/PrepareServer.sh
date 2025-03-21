@@ -45,6 +45,8 @@ source "${ROOT_DIR}/${PYTHON_VENV_DIR}/bin/activate"
 echo "install pip package for web scribing."
 pip3 install -r "${ROOT_DIR}/tama_lambda/requirements.txt"
 pip-review --auto
+# aiohttp 3.10.11以上だとContent-Typeヘッダーが取れないため、しばらく固定する
+pip3 install aiohttp==3.10.10
 
 # cronジョブをインストールする
 crontab -u root "${ROOT_DIR}/server/cron.d/root.cron"
