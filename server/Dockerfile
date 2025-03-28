@@ -36,7 +36,7 @@ RUN sudo mkdir -p /distfiles && sudo chmod 755 /distfiles \
 # python3.12のビルド＆インストール /usr/local/bin/python3.12 としてインストールされる
 RUN cd /distfiles \
     && wget https://www.python.org/ftp/python/${PYTHON3_VERSION}/Python-${PYTHON3_VERSION}.tgz \
-    && tar zxvf Python-3.12.5.tgz \
+    && tar zxvf Python-${PYTHON3_VERSION}.tgz \
     && cd Python-${PYTHON3_VERSION} \
     && ./configure --with-ensurerpip --enable-optimizations \
     && make && make install

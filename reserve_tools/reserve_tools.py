@@ -1068,6 +1068,11 @@ def send_discord_channel(message_bodies, token, channel_id, logger=None):
     """
     Discordのチャンネルにメッセージを送信する
     """
+    # メッセージボディーサイズが1以下の場合は、送信を止める
+    if len(message_bodies[0]) <= 1:
+        logger.debug(f'message size is less than 1, therefore stop to send to discord.')
+        return None
+    
     # BotのトークンとチャンネルIDを設定する
     _token = token
     _channel_id = channel_id
