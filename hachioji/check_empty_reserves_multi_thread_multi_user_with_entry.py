@@ -927,8 +927,9 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
                         message_bodies = []
                         message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        # reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
-                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                        # reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                        # Discordに予約完了のメッセージを送信する
+                        reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_reserved_channel_id'], logger=logger)
                         # 空き状況の検索ページへ戻る
                         ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=logger)
             # クローラーのWEBブラウザを終了する
