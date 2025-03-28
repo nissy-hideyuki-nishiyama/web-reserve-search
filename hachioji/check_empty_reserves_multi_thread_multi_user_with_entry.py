@@ -171,11 +171,7 @@ def selenium_input_datas(driver, input_date, logger=None):
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
     # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
     f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]/input")
-    # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
-    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]/input")
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
-    # f_period.click()
-    driver.execute_script("arguments[0].click();", f_period)
     # f_period.click()
     driver.execute_script("arguments[0].click();", f_period)
     # 画面を最下行までスクロールさせ、全ページを表示する
