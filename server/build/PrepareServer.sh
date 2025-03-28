@@ -34,7 +34,7 @@ if [ -d "${ROOT_DIR}/${PYTHON_VENV_DIR}" ]; then
     rm -rf "${ROOT_DIR}/${PYTHON_VENV_DIR:?}"
 fi
 
-# python の venv　環境を作成する。コンテナ内のpython3.12.xをしていして、venvを作成する
+# python の venv　環境を作成する。コンテナ内のpython3.12.xを指定して、venvを作成する
 echo "make python venv environment"
 cd "${ROOT_DIR}"
 /usr/local/bin/python3 -m venv "${PYTHON_VENV_DIR}"
@@ -45,6 +45,8 @@ source "${ROOT_DIR}/${PYTHON_VENV_DIR}/bin/activate"
 echo "install pip package for web scribing."
 pip3 install -r "${ROOT_DIR}/tama_lambda/requirements.txt"
 pip-review --auto
+# aiohttp 3.10.11以上だとContent-Typeヘッダーが取れないため、しばらく固定する
+pip3 install aiohttp==3.10.10
 
 # cronジョブをインストールする
 crontab -u root "${ROOT_DIR}/server/cron.d/root.cron"

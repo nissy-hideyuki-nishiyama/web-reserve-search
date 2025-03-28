@@ -428,10 +428,16 @@ def main(request_objs, coro, limit=4, logger=None):
     # HTTPリクエスト数
     global http_req_num
     # 非同期IO処理のaiohttpのためにイベントループを作成する
+    # if not asyncio.get_event_loop_policy().get_event_loop():
+    #     loop = asyncio.new_event_loop()
+    #     asyncio.set_event_loop(loop)
+    # else:
+    #     loop = asyncio.get_event_loop()
     loop = asyncio.new_event_loop()
     # 空き予約検索を開始する
     ## 検索のためのリクエストオブジェクトを作成する
-    results = loop.run_until_complete(get_request_courts(request_objs, coro, limit))
+    # results = loop.run_until_complete(get_request_courts(request_objs, coro, limit))
+    results = asyncio.run(get_request_courts(request_objs, coro, limit))
     # デバッグ用(HTTPリクエスト回数を表示する)
     logger.debug(f'HTTP リクエスト数: {http_req_num} 回数')
     # 実行時間を表示する
@@ -454,7 +460,8 @@ def main2(cfg, cookies, court_link_list, coro, limit=4, logger=None):
     loop = asyncio.new_event_loop()
     # 空き予約検索を開始する
     ## 検索のためのリクエストオブジェクトを作成する
-    results = loop.run_until_complete(get_request_time(cfg, cookies, court_link_list, coro, limit))
+    # results = loop.run_until_complete(get_request_time(cfg, cookies, court_link_list, coro, limit))
+    results = asyncio.run(get_request_time(cfg, cookies, court_link_list, coro, limit))
     # デバッグ用(HTTPリクエスト回数を表示する)
     logger.debug(f'HTTP リクエスト数: {http_req_num} 回数')
     # 実行時間を表示する
@@ -1197,7 +1204,9 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
                         # 予約確定通知のメッセージを作成する
                         message_bodies = reserve_tools.create_reserved_message(_id, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                        # reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                        # Discordに送信する
+                        reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
                         # 予約件数と指定年月日の予約件数に1件追加する
                         reserved_num += 1
                         _rev_num_by_date += 1
@@ -1220,14 +1229,14 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
 # 事後処理
 def postproc(reserves_list, logger=None):
     """
-    空き予約リストを整形して、LINEにメッセージを送信する
+    空き予約リストを整形して、空きコート予約メッセージを送信する
     """
     # 送信メッセージリストの初期化
     message_bodies = []
     # 送信メッセージを作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     # LINEに送信する
-    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     # Discordに空き予約情報のメッセージを送信する
     reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     return None

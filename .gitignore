@@ -139,3 +139,5 @@ sam-app
 .venv/
 .venv/*
 sam-app-lambda
+lambda_layer/selenium_layer/python/*
+lambda_layer/headless-chromium/python/*

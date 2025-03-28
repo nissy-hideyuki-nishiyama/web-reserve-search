@@ -130,14 +130,14 @@ def selenium_post_conditions(driver, date_list, reserves_list, cfg, logger=None)
         # 検索結果をHTMLソースとしてオブジェクトに保存する
         _html = driver.page_source
         # デバッグ用にHTMLファイルを保存する
-        #reserve_tools.save_result_html(_html, f'hachioji_empty_reserves_{f_date}.html')
+        # reserve_tools.save_result_html(_html, f'hachioji_empty_reserves_{f_date}.html')
         #sleep(1)
         # HTML解析を実行し、空き予約名リストを作成する
         get_empty_court_time(cfg, reserves_list, f_date, _html, logger=logger)
         # 条件をクリア ボタンをクリックして、次の検索の準備をする
 
     # 空き予約名リストを表示する
-    #logger.debug(f'Court_Reserve_List:\n{reserves_list}')
+    # logger.debug(f'Court_Reserve_List:\n{reserves_list}')
     return reserves_list
 
 # 検索ページに検索条件を入力して、検索を結果を取得する
@@ -171,7 +171,11 @@ def selenium_input_datas(driver, input_date, logger=None):
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
     # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
     f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]/input")
+    # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
+    f_period = driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/dl[2]/dd/div[1]/div/fieldset/div/label[1]/input")
     # 期間ラジオボタンで「指定開始日のみ」をクリックする
+    # f_period.click()
+    driver.execute_script("arguments[0].click();", f_period)
     # f_period.click()
     driver.execute_script("arguments[0].click();", f_period)
     # 画面を最下行までスクロールさせ、全ページを表示する
@@ -784,7 +788,7 @@ def main_search_empty_reserves():
     threadsafe_list = multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=threads_num, logger=logger)
     logger.debug(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
     #exit()
-    # LINEにメッセージを送信する
+    # 空きコート予約メッセージを送信する
     ## メッセージ本体を作成する
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
@@ -928,9 +932,7 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
                         message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
                         # reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
-                        # reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
-                        # Discordに予約完了のメッセージを送信する
-                        reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_reserved_channel_id'], logger=logger)
+                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # 空き状況の検索ページへ戻る
                         ( driver, mouse ) = return_to_datesearch(driver, mouse, cfg, logger=logger)
             # クローラーのWEBブラウザを終了する
