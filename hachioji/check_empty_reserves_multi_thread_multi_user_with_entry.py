@@ -785,11 +785,11 @@ def main_search_empty_reserves():
     threadsafe_list = multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=threads_num, logger=logger)
     logger.debug(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
     #exit()
-    # LINEにメッセージを送信する
+    # 空きコート予約メッセージを送信する
     ## メッセージ本体を作成する
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     # Discordに空き予約情報を送信する
     reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     #exit()

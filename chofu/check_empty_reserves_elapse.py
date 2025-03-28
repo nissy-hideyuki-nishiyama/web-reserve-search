@@ -355,8 +355,6 @@ def main():
     """
     メインルーチン
     """
-    # LINEのメッセージサイズの上限
-    #line_max_message_size = 1000
     # ファイル
     #path_html = 'temp_result.html'
     # 祝日の初期化
@@ -373,7 +371,7 @@ def main():
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
     reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
     # 設定ファイルを読み込んで、設定パラメータをセットする
-    cfg = reserve_tools.read_json_cfg('cfg2.json')
+    cfg = reserve_tools.read_json_cfg('cfg.json')
     # 検索リストを作成する
     target_months_list = reserve_tools.create_month_list(cfg)
     #datetime_list = create_datetime_list(target_months_list, public_holiday, cfg)
@@ -391,11 +389,13 @@ def main():
     #print(type(reserves_list))
     #print(dir(reserves_list))
     print(reserves_list)
-    # LINEにメッセージを送信する
+    # 空き予約メッセージを送信する
     ## メッセージ本体を作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg)
+    # reserve_tools.send_line_notify(message_bodies, cfg)
+    # Discordに空き予約情報のメッセージを送信する
+    reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     #exit()
     
 if __name__ == '__main__':
