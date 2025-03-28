@@ -26,3 +26,6 @@ do
     fi
   done
 done
+
+echo "Delete Chrome Cache Directory."
+rm -rf /tmp/.com.google.Chrome.* && rm -rf /tmp/.org.chromium.Chromium.*

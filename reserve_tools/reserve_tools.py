@@ -959,14 +959,14 @@ def create_date_list_machida(target_months_list, public_holiday, cfg, logger=Non
                 date_list.append(_str_date)
     return date_list
 
-# LINEに空き予約を送信する
+# 空き予約を送信する
 ## メッセージ本文の作成
 def create_message_body(reserves_list, message_bodies, cfg, logger=None):
     """
     LINEに送信するメッセージの本体を作成する
     """
-    # LINEのメッセージ本体サイズ
-    max_message_size=int(cfg['line_max_message_size'])
+    # Discordのメッセージ本体サイズの最大値
+    max_message_size=int(cfg['discord_max_message_size'])
     # メッセージ本体
     _body = f'\n'
     _body_date = f'\n'
@@ -1039,6 +1039,7 @@ def create_reserved_message(userid, reserved_number, reserve, message_bodies, cf
     return message_bodies
 
 # LINEにメッセージを送信する
+# LINE Noftifyサービスの停止に伴い、2025/4以降は本関数は使わない
 def send_line_notify(message_bodies, token, logger=None):
     """
     LINE Notifyを使ってメッセージを送信する
@@ -1126,4 +1127,3 @@ def main():
     
 if __name__ == '__main__':
     main()
-

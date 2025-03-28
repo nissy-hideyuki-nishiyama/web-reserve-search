@@ -178,11 +178,10 @@ def selenium_input_datas(driver, input_date, logger=None):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     # 検索ボタンをクリックする
     # ページデザイン変更に伴い、XPATHを修正する(2024/10/4)
-    # element = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
+    # driver.find_element(By.XPATH, "/html/body/div[1]/div/main/section[2]/div/form/div[2]/div[1]/p/button[2]").click()
     # ページデザイン変更に伴い、XPATHを修正する(2025/03/20)
     element = driver.find_element(By.XPATH, "//*[@id='pageTop']/main/section[2]/div/form/div[2]/div[1]/p/button[2]")
     driver.execute_script("arguments[0].click();", element)
-
     # 検索結果がすべて表示されるまで待機する
     wait.until(EC.presence_of_all_elements_located)
     sleep(1)
@@ -785,11 +784,11 @@ def main_search_empty_reserves():
     threadsafe_list = multi_thread_datesearch(cfg, headers, date_list_threads, threadsafe_list, threads_num=threads_num, logger=logger)
     logger.debug(json.dumps(threadsafe_list.reserves_list, indent=2, ensure_ascii=False))
     #exit()
-    # LINEにメッセージを送信する
+    # 空きコート予約メッセージを送信する
     ## メッセージ本体を作成する
     reserve_tools.create_message_body(threadsafe_list.reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     # Discordに空き予約情報を送信する
     reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
     #exit()
@@ -928,8 +927,7 @@ def main_reserve_proc(cfg, logger, reserves_list, target_months_list, public_hol
                         message_bodies = []
                         message_bodies = reserve_tools.create_reserved_message(_userid, reserved_number, reserve, message_bodies, cfg, logger=logger)
                         # LINEに送信する
-                        # reserve_tools.send_line_notify(message_bodies, cfg, logger=logger)
-                        reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
+                        # reserve_tools.send_line_notify(message_bodies, cfg['line_token_reserved'], logger=logger)
                         # Discordに予約完了のメッセージを送信する
                         reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_reserved_channel_id'], logger=logger)
                         # 空き状況の検索ページへ戻る

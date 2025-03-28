@@ -1,10 +1,10 @@
 # モジュールの読み込み
 ## HTMLクローラー関連
+import ssl
 import requests
 import urllib
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.poolmanager import PoolManager
-import ssl
 
 ## カレンダー関連
 from time import sleep
@@ -25,13 +25,23 @@ from reserve_tools import reserve_tools
 
 # TLSv1.2以上で接続するようにする
 class TLSAdapter(HTTPAdapter):
-    def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = PoolManager(
-            num_pools=connections,
-            maxsize=maxsize,
-            block=block,
-            ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
-        )
+    def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
+        # self.poolmanager = PoolManager(
+        #     num_pools=connections,
+        #     maxsize=maxsize,
+        #     block=block,
+        #     # ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
+        #     ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
+        # )
+        # SSLコンテキストを作成
+        context = ssl.create_default_context()
+        
+        # サーバが古いプロトコル (例: TLSv1) のみ対応の場合は最低バージョンを下げる
+        # サーバが TLSv1.2 をサポートしている場合は、以下の行は変更不要です。
+        context.minimum_version = ssl.TLSVersion.TLSv1_2  # 必要に応じて変更
+        
+        pool_kwargs['ssl_context'] = context
+        self.poolmanager = PoolManager(num_pools=connections, maxsize=maxsize, block=block, **pool_kwargs)
 
 # HTTPリクエスト数
 http_req_num = 0
@@ -355,14 +365,13 @@ def main():
     # 空き予約検索を開始する
     reserves_list = get_reserves(cfg, target_year_month_list, date_list, reserves_list, cookies, response, pre_url, logger=logger)
     logger.info(json.dumps(reserves_list, indent=2, ensure_ascii=False))
-    # LINEにメッセージを送信する
+    # 空きコート予約メッセージを送信する
     ## メッセージ本体を作成する
     message_bodies = reserve_tools.create_message_body(reserves_list, message_bodies, cfg, logger=logger)
     ## LINEに空き予約情報を送信する
-    reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
+    # reserve_tools.send_line_notify(message_bodies, cfg['line_token'], logger=logger)
     # Discordに空き予約情報のメッセージを送信する
     reserve_tools.send_discord_channel(message_bodies, cfg['discord_token'], cfg['discord_channel_id'], logger=logger)
-
     #exit()
     return logger
     
@@ -377,5 +386,3 @@ if __name__ == '__main__':
     elapsed_time = time.time() - start
     logger.debug(f'whole() duration time: {elapsed_time} sec')
     exit()
-
-
