@@ -2,9 +2,9 @@
 ## HTMLクローラー関連
 import ssl
 import requests
-import urllib
+import urllib3
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.poolmanager import PoolManager
+from urllib3.poolmanager import PoolManager
 
 ## カレンダー関連
 from time import sleep
@@ -23,25 +23,18 @@ import json
 # ツールライブラリを読み込む
 from reserve_tools import reserve_tools
 
-# TLSv1.2以上で接続するようにする
 class TLSAdapter(HTTPAdapter):
-    def init_poolmanager(self, connections, maxsize, block=False, **pool_kwargs):
-        # self.poolmanager = PoolManager(
-        #     num_pools=connections,
-        #     maxsize=maxsize,
-        #     block=block,
-        #     # ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
-        #     ssl_minimum_version=ssl.PROTOCOL_TLSv1_2,
-        # )
-        # SSLコンテキストを作成
+    """
+    強制的にTLSv1.2以上を使用するカスタムアダプター
+    """
+    def init_poolmanager(self, connections, maxsize, block=False):
+        # クライアント用のSSLコンテキストを作成
         context = ssl.create_default_context()
-        
-        # サーバが古いプロトコル (例: TLSv1) のみ対応の場合は最低バージョンを下げる
-        # サーバが TLSv1.2 をサポートしている場合は、以下の行は変更不要です。
-        context.minimum_version = ssl.TLSVersion.TLSv1_2  # 必要に応じて変更
-        
-        pool_kwargs['ssl_context'] = context
-        self.poolmanager = PoolManager(num_pools=connections, maxsize=maxsize, block=block, **pool_kwargs)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2  # TLSv1.2以上を指定
+        context.set_ciphers("DEFAULT:@SECLEVEL=1")  # セキュリティレベルを調整
+        self.poolmanager = PoolManager(
+            num_pools=connections, maxsize=maxsize, block=block, ssl_context=context
+        )
 
 # HTTPリクエスト数
 http_req_num = 0
@@ -57,15 +50,20 @@ def get_cookie(cfg):
     # セッションを開始する
     session = requests.Session()
     session.mount('https://', TLSAdapter())
-    response = session.get(cfg['first_url'])
-    http_req_num += 1
-    #response.raise_for_status()
-    cookie_sessionid = session.cookies.get(cfg['cookie_sessionid'])
-    #cookie_starturl = session.cookies.get(cfg['cookie_starturl'])
-    cookies = { cfg['cookie_sessionid']: cookie_sessionid }
-    #print(response.content)
-    #res_sjis = response.text
-    #print(res_sjis.encode('utf-8'))
+    try:
+        response = session.get(cfg['first_url'], timeout=10)
+        http_req_num += 1
+        #response.raise_for_status()
+        cookie_sessionid = session.cookies.get(cfg['cookie_sessionid'])
+        #cookie_starturl = session.cookies.get(cfg['cookie_starturl'])
+        cookies = { cfg['cookie_sessionid']: cookie_sessionid }
+        #print(response.content)
+        #res_sjis = response.text
+        #logger.debug(res_sjis.encode('utf-8'))
+    except requests.exceptions.SSLError as e:
+        logger.error(f"SSLエラーが発生しました: {e}")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"リクエストエラー: {e}")
     return cookies , response
 
 ## フォームデータを取得する
@@ -99,9 +97,11 @@ def do_post_request(cookies, form_data, pre_url, url):
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
-    params = urllib.parse.urlencode(form_data)
+    params = urllib3.parse.urlencode(form_data)
     # POSTリクエストする
-    res = requests.post(url, headers=headers, cookies=cookies, data=params)
+    session = requests.Session()
+    session.mount('https://', TLSAdapter())
+    res = session.post(url, headers=headers, cookies=cookies, data=params)
     http_req_num += 1
     # shift_jisのHTMLを正しく理解できるように文字コードを指定する
     res.encoding = 'cp932'
