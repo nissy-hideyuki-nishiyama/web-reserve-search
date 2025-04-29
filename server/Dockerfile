@@ -11,7 +11,7 @@ RUN dnf update -y \
         # コンテナビルドに必要なパッケージ
         tar unzip sudo zip git python3-pip wget jq python3.11 python3.11-pip python3.11-setuptools \
         # python3.12の野良ビルドに必要。パッケージが出たらコメントアウト
-        openssl openssl-devel bzip2-devel libffi-devel \
+        openssl openssl-libs openssl-devel bzip2-devel libffi-devel \
         # 常時稼働コンテナして必要なパッケージ
         procps-ng systemd cronie crontabs man-db-cron rpm-cron logrotate rsyslog rsyslog-logrotate sysstat \
         # 保守のために必要なパッケージ
