@@ -1,5 +1,3 @@
-# version: "3.7"
-
 services:
   webscribe:
     #build: .
@@ -7,16 +5,16 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        CHROME_VERSION: ${CHROME_VERSION:-127.0.6613.84}
-        CHROME_DRIVER_VERSION: ${CHROME_DRIVER_VERSION:-127.0.6613.84}
+        CHROME_VERSION: ${CHROME_VERSION:-135.0.7049.114}
+        CHROME_DRIVER_VERSION: ${CHROME_DRIVER_VERSION:-135.0.7049.114}
         TARGET_DOWNLOAD_URL: ${TARGET_DOWNLOAD_URL:-}
         CHROMEDRIVER_DOWNLOAD_URL: ${CHROMEDRIVER_DOWNLOAD_URL:-}
-        PYTHON3_VERSION: ${PYTHON3_VERSION:-3.12.9}
+        PYTHON3_VERSION: ${PYTHON3_VERSION:-3.12.10}
         WORK_DIR: ${WORK_DIR}
-    image: amazonlinux2023/webscribe_prod2024:latest
-    container_name: prod_amzlx2024
+    image: amazonlinux2023/webscribe_prod2025:latest
+    container_name: prod_amzlx2025
     privileged: true
-    # restart: always
+    restart: always
     # user: 1000:1000
     volumes:
       - type: bind

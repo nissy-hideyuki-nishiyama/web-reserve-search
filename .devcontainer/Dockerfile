@@ -37,7 +37,7 @@ RUN apt update -y \
         software-properties-common \
         file \
         libmagic-mgc \
-        libmacic1t64 \
+        libmagic1t64 \
         -y
 
 
