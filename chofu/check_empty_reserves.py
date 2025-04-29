@@ -287,7 +287,7 @@ def get_empty_court_time(cfg, form_data, response, reserves_list, logger=None):
                             # カラムのポジションを加算する
                             _colum_pos += int(_pos_span)
     # 空き予約リストを返す
-    logger.info(f'reserves_list: {reserves_list}')
+    # logger.info(f'reserves_list: {reserves_list}')
     return reserves_list
 
 # 空き予約日リストを生成する
@@ -330,7 +330,7 @@ def get_reserve_day(date_list, response, logger=None):
             #else:
             #    print(f'not matched want day. compare to {_want_day}')
     # 希望に沿った空き予約日リストを返す
-    logger.info(f'reserve_days_list: {reserve_days_list}')
+    # logger.info(f'reserve_days_list: {reserve_days_list}')
     return reserve_days_list
 
 # メインルーチン
