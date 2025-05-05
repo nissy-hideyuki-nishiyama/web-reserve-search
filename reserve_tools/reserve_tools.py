@@ -48,7 +48,7 @@ s3 = boto3.resource('s3')
 
 # 設定ファイルの読み込み
 ## 祝日ファイル
-def set_public_holiday(public_holiday_file_name, public_holiday):
+def set_public_holiday(public_holiday_file_name):
     """
     祝日ファイルを読み込んで、祝日リストを設定する
     """
@@ -56,12 +56,14 @@ def set_public_holiday(public_holiday_file_name, public_holiday):
     #public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
     # 祝日ファイルを読み込んで祝日リストに日を要素として追加する
     with open(public_holiday_file_name, mode='r', encoding='utf-8', errors='ignore' ) as hdfile:
-        json_hday = json.load(hdfile)
-        for key, value in json_hday.items():
-            _key = int(key)
-            public_holiday[_key] = value
+        # json_hday = json.load(hdfile)
+        # for key, values in json_hday.items():
+        #     _key = int(key)
+        #     public_holiday[_key] = values
             #print(f'PublicHoliday_{key}: {public_holiday[_key]}')
         #print(public_holiday)
+        # return public_holiday
+        public_holiday = json.load(hdfile)
         return public_holiday
 
 ## 設定ファイル
@@ -273,6 +275,8 @@ def create_day_list(month, public_holiday, cfg):
     JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
     # 希望曜日リストを作成する
     selected_weekdays = cfg['want_weekdays']
+    # 祝日リストを作成する
+    public_holidays = public_holiday[str(month)]
     # 祝日以外の希望日リストを作成する
     want_month_days = cfg['want_month_days'][str(month)]
     # 検索除外日リストを作成する
@@ -301,8 +305,8 @@ def create_day_list(month, public_holiday, cfg):
             _day += 7
     # 祝日の日をリストに追加する
     # 該当月の祝日が空なら追加しない
-    if public_holiday[month]:
-        for _holiday in public_holiday[month]:
+    if public_holidays:
+        for _holiday in public_holidays:
             # 今日の日付より大きいなら追加する
             if _holiday > _ref_day:
                 day_list.append(_holiday)
@@ -334,6 +338,8 @@ def create_want_day_list(month, public_holiday, cfg):
     JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
     # 希望曜日リストを作成する
     selected_weekdays = cfg['want_weekdays']
+    # 祝日リストを作成する
+    public_holidays = public_holiday[str(month)]
     # 祝日以外の希望日リストを作成する
     want_month_days = cfg['want_month_days'][str(month)]
     # 予約希望除外日リストを作成する
@@ -367,8 +373,8 @@ def create_want_day_list(month, public_holiday, cfg):
             _day += 7
     # 祝日の日をリストに追加する
     # 該当月の祝日が空なら追加しない
-    if public_holiday[month]:
-        for _holiday in public_holiday[month]:
+    if public_holidays:
+        for _holiday in public_holidays:
             # 今日の日付より大きいなら追加する
             if _holiday > _ref_day:
                 day_list.append(_holiday)
