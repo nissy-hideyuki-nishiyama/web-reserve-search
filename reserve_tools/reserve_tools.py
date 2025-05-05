@@ -225,10 +225,12 @@ def get_file_from_s3(s3bucket, file_s3path):
 # 年越し処理
 def check_new_year(month):
     """
-    年月日が年越ししているか確認する
+    年月日が年越ししていているか確認する
     入力された月を見て、これが現在の月よりも小さい場合、年越し処理として
     新しい年を戻り値として返す
     """
+    if month is None:
+        raise ValueError('month is None')
     # タイムゾーンを設定する
     JST = datetime.timezone(datetime.timedelta(hours=+9), 'JST')
     _now = datetime.datetime.now(JST)
