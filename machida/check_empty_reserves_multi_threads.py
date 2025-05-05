@@ -379,10 +379,8 @@ def prepare_serch_empty_reserves(cfg_filename="cfg.json"):
     検索対象日の生成
     """
     # 初期化処理
-    # 祝日の初期化
-    public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    public_holiday = reserve_tools.set_public_holiday('public_holiday.json')
     # 設定ファイルを読み込んで、設定パラメータをセットする
     #cfg = reserve_tools.read_json_cfg('cfg.json')
     cfg = reserve_tools.read_json_cfg(cfg_filename)

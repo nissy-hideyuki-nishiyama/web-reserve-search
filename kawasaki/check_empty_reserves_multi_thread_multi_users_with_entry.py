@@ -1380,8 +1380,6 @@ def main():
     """
     メインルーチン
     """
-    # 祝日の初期化
-    public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
     # 空き予約の辞書の初期化
     threadsafe_list = ThreadSafeReservesList()
     # 送信メッセージリストの初期化
@@ -1394,7 +1392,7 @@ def main():
     reqdata = []
     # 処理の開始
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    public_holiday = reserve_tools.set_public_holiday('public_holiday.json')
     # 設定ファイルを読み込んで、設定パラメータをセットする
     cfg = reserve_tools.read_json_cfg('cfg.json')
     # ロギングを設定する

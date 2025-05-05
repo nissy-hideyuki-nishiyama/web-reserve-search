@@ -377,12 +377,10 @@ def prepare():
     """
     変数の初期化などの事前準備
     """
-    # 祝日の初期化
-    public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
     # /tmpファイルに設定ファイルがあるか確認し、なければS3からファイルをダウンロードする
     reserve_tools.is_exist_files('nissy-jp-input', 'webscribe/tennis_reserve_search/tama/cfg.json', 'webscribe/tennis_reserve_search/tama/court_map.json', 'webscribe/tennis_reserve_search/common/public_holiday.json')
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('/tmp/public_holiday.json', public_holiday)
+    public_holiday = reserve_tools.set_public_holiday('/tmp/public_holiday.json')
     # 設定ファイルを読み込んで、設定パラメータをセットする
     #cfg = reserve_tools.read_json_cfg('cfg.json')
     cfg = reserve_tools.read_json_cfg('/tmp/cfg.json')

@@ -355,21 +355,13 @@ def main():
     """
     メインルーチン
     """
-    # ファイル
-    #path_html = 'temp_result.html'
-    # 祝日の初期化
-    public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
-    # 入力データの辞書の初期化
-    #input_data = {}
-    # 空き予約の辞書の初期化
-    #reserve_name_list = {}
     # 送信メッセージリストの初期化
     message_bodies = []
     # 処理の開始
     # 空き予約リストの初期化
     reserves_list = {}
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
-    reserve_tools.set_public_holiday('public_holiday.json', public_holiday)
+    public_holiday = reserve_tools.set_public_holiday('public_holiday.json')
     # 設定ファイルを読み込んで、設定パラメータをセットする
     cfg = reserve_tools.read_json_cfg('cfg.json')
     # 検索リストを作成する
