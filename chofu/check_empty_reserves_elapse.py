@@ -164,7 +164,7 @@ def get_reserves(cfg, month_list, date_list, reserves_list, cookies, response, p
             #print(form_data)
             res = do_post_request(cookies, form_data, pre_url, target_url)
             #print(f'Institution_Name : {_institution_name}')
-            #reserve_tools.save_html_file(res)
+            #reserve_tools.save_html_to_filename(res, 'output.html')
             form_data = get_formdata(res)
             # 月間予約ページから空き予約日リストを生成する
             reserve_days_list = get_reserve_day(date_list, res)
@@ -186,7 +186,7 @@ def get_reserves(cfg, month_list, date_list, reserves_list, cookies, response, p
                 res_reserve = do_post_request(cookies, form_data, cfg['court_search_url'], cfg['day_search_url'])
                 #print(dir(res_reserve))
                 #print(res_reserve.encoding)
-                #reserve_tools.save_html_file(res_reserve)
+                #reserve_tools.save_html_to_filename(res_reserve, 'output.html')
                 # 空きコートと時間帯を取得する
                 reserves_list = get_empty_court_time(cfg, form_data, res_reserve, reserves_list)
             # 翌月のリンクをクリックするため、カウントアップする

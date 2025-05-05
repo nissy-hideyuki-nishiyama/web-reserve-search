@@ -126,12 +126,12 @@ def selenium_get_cookie_and_html(driver, cfg, logger=None):
     response = driver.get(cfg['first_url'])
     http_req_num += 1
     # デバッグ用にHTMLファイルを保存する
-    #reserve_tools.save_result_html(response.page_source, f'dselect.html')
+    #reserve_tools.save_text_html_to_filename(response.page_source, f'dselect.html')
     # 空き予約検索ページにアクセスする
     response = driver.get(cfg['second_url'])
     http_req_num += 1
     # デバッグ用にHTMLファイルを保存する
-    #reserve_tools.save_result_html(response.page_source, f'dselect.html')
+    #reserve_tools.save_text_html_to_filename(response.page_source, f'dselect.html')
     elment = wait.until(EC.presence_of_all_elements_located)
     return driver
 
@@ -166,7 +166,7 @@ def selenium_post_conditions(driver, date_list, reserves_list, cfg, logger=None)
         # 検索結果をHTMLソースとしてオブジェクトに保存する
         _html = driver.page_source
         # デバッグ用にHTMLファイルを保存する
-        #reserve_tools.save_result_html(_html, f'reserves_{_date}.html')
+        #reserve_tools.save_text_html_to_filename(_html, f'reserves_{_date}.html')
         #sleep(1)
         # HTML解析を実行し、空き予約名リストを作成する
         get_empty_court_time(cfg, reserves_list, _date, _html, logger=logger)

@@ -171,7 +171,7 @@ def get_ncforminfo(response):
     # フォームデータ(dict型)を初期化する
     form_data = {}
     # デバッグ用としてhtmlファイルとして保存する
-    #_file_name = reserve_tools.save_result_html(response.text, 'tmp01.html')
+    #_file_name = reserve_tools.save_text_html_to_filename(response.text, 'tmp01.html')
     # html解析
     soup = BeautifulSoup(response.text, 'html.parser')
     # form_data部分のみ抽出する

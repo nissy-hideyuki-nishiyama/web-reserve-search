@@ -226,7 +226,7 @@ def get_formdata(response):
     # フォームデータ(dict型)を初期化する
     _form_data = {}
     # デバッグ用としてhtmlファイルとして保存する
-    #_file_name = reserve_tools.save_html_file(response)
+    #_file_name = reserve_tools.save_html_to_filename(response, 'output.html')
     #print(f'save file: {_file_name}')
     # html解析
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -739,7 +739,7 @@ def get_formdata_rsvDateSearch(response):
     # フォームデータ(dict型)を初期化する
     _form_data = {}
     # デバッグ用としてhtmlファイルとして保存する
-    #_file_name = reserve_tools.save_html_file(response)
+    #_file_name = reserve_tools.save_html_to_filename(response, 'output.html')
     #print(f'save file: {_file_name}')
     # html解析
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -886,7 +886,7 @@ def get_formdata_rsvEmptyState(response):
     #    _html = f.read()
     #print(_html)
     # デバッグ用としてhtmlファイルとして保存する
-    #_file_name = reserve_tools.save_html_file(response)
+    #_file_name = reserve_tools.save_html_to_filename(response, 'output.html')
     #print(f'save file: {_file_name}')
     # フォームデータ(dict型)を初期化する
     _form_data = {}

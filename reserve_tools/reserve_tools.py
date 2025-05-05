@@ -50,32 +50,73 @@ s3 = boto3.resource('s3')
 ## 祝日ファイル
 def set_public_holiday(public_holiday_file_name):
     """
-    祝日ファイルを読み込んで、祝日リストを設定する
+    Read the holiday file and set the holiday list.
+
+    Args:
+        public_holiday_file_name (str): The name of the holiday file.
+
+    Returns:
+        dict: The holiday list.
     """
-    # 祝日のリストを初期化する
-    #public_holiday = [ [], [], [], [], [], [], [], [], [], [], [], [], [] ]
-    # 祝日ファイルを読み込んで祝日リストに日を要素として追加する
+    # Check if the file path is valid
+    if not os.path.exists(public_holiday_file_name):
+        raise FileNotFoundError(f"The file {public_holiday_file_name} does not exist.")
+
+    # Check if the file is readable
+    if not os.access(public_holiday_file_name, os.R_OK):
+        raise PermissionError(f"The file {public_holiday_file_name} is not readable.")
+
+    # Read the holiday file
     with open(public_holiday_file_name, mode='r', encoding='utf-8', errors='ignore' ) as hdfile:
-        # json_hday = json.load(hdfile)
-        # for key, values in json_hday.items():
-        #     _key = int(key)
-        #     public_holiday[_key] = values
-            #print(f'PublicHoliday_{key}: {public_holiday[_key]}')
-        #print(public_holiday)
-        # return public_holiday
-        public_holiday = json.load(hdfile)
-        return public_holiday
+        # Check if the file is empty
+        if hdfile.read(1) == '':
+            raise ValueError(f"The file {public_holiday_file_name} is empty.")
+
+        # Reset the file pointer
+        hdfile.seek(0)
+
+        # Load the JSON data
+        try:
+            public_holiday = json.load(hdfile)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse the JSON data in {public_holiday_file_name}: {e}")
+
+    return public_holiday
 
 ## 設定ファイル
 def read_json_cfg(cfg_file_name):
     """
-    JSON形式の設定ファイルを読み込み、変数、リスト、dictを設定する
+    Reads a JSON-formatted configuration file and sets variables, lists, and dictionaries.
+
+    Args:
+        cfg_file_name (str): The name of the configuration file.
+
+    Returns:
+        dict: The configuration dictionary.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        PermissionError: If the file is not readable.
+        ValueError: If the file is empty or contains invalid JSON data.
     """
-    with open(cfg_file_name, mode='r', encoding='utf-8', errors='ignore' ) as json_cfg:
-        cfg = json.load(json_cfg)
-        #print(f'Config:\n')
-        #print(cfg)
-        return cfg
+    try:
+        # Check if the file is empty
+        with open(cfg_file_name, mode='r', encoding='utf-8', errors='ignore' ) as json_cfg:
+            if json_cfg.read(1) == '':
+                raise ValueError(f"The file {cfg_file_name} is empty.")
+            # Reset the file pointer
+            json_cfg.seek(0)
+            # Load the JSON data
+            cfg = json.load(json_cfg)
+            #print(f'Config:\n')
+            #print(cfg)
+            return cfg
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"The file {cfg_file_name} does not exist.") from e
+    except PermissionError as e:
+        raise PermissionError(f"The file {cfg_file_name} is not readable.") from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse the JSON data in {cfg_file_name}: {e}") from e
 
 # loggerの設定
 def mylogger(cfg):
@@ -131,27 +172,14 @@ def mylogger(cfg):
     return logger
 
 # requestsメソッドのレスポンスをHTMLファイルを保存する
-def save_html_file(response):
-    html = response.text
-    print(f'save html file: output.html')
-    with open('output.html', mode='w', encoding='utf-8', errors='ignore') as f:
-        f.write(html)
-
-# requestsメソッドのレスポンスをHTMLファイルを保存する
 def save_html_to_filename(response, filename):
     html = response.text
     #print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(html)
 
-# aiohttp.requestsメソッドのレスポンスをHTMLファイルを保存する
-def save_html_to_filename_for_aiohttp(response, filename):
-    print(f'save html file: {filename}')
-    with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
-        f.write(response)
-
 # selenium(chrome)のレスポンスをHTMLファイルを保存する
-def save_result_html(response, filename):
+def save_text_result_html_to_filename(response, filename):
     print(f'save html file: {filename}')
     with open(filename, mode='w', encoding='utf-8', errors='ignore') as f:
         f.write(response)
