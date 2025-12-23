@@ -61,7 +61,7 @@ def prepare_proc_for_reserve(cfg, headers):
     """
     #ヘッダー情報
     #headers = {
-    #    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+    #    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     #}
     # トップページに接続する
     #( cookies ) = get_cookie_request(cfg, headers)
@@ -304,7 +304,7 @@ def do_reserve(cfg, court_map, cookies, date, time, court):
     """
     #ヘッダー情報
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
         'Referer' : cfg['day_search_url']
     }
     # コートIDを取得する
@@ -537,7 +537,7 @@ def main():
     target_months_list = reserve_tools.create_month_list(cfg)
     #ヘッダー情報
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # (TBD)予約処理の判定
     ## 予約希望日リスト、希望時間帯、希望コートと空きコートリストの比較と処理の継続確認

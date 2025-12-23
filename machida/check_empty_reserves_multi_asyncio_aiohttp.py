@@ -194,7 +194,7 @@ def connect_to_get_cookies_and_html(cfg, logger=None):
     """
     global http_req_num
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     } 
     # クローラーの初期化
     ( driver, mouse ) = setup_driver(headers)
@@ -314,7 +314,7 @@ def get_empty_reserves_html(cfg, cookies, form_data, logger=None):
     """
     global http_req_num
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
         'Referer': 'https://www.pf489.com/machida/web/Wp_TopMenu.aspx',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Host': 'www.pf489.com',

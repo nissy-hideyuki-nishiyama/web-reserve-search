@@ -143,7 +143,7 @@ def get_cookie_and_formdata(cfg, index):
     #print(f'インデックス: # {index}')
     # ヘッダーを設定する
     headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
             }
     # cookieを取得する
     (cookies, response) = get_cookie_request(cfg)

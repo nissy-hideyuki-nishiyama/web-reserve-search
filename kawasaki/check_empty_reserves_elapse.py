@@ -147,7 +147,7 @@ def search_empty_reserves_from_datesearch(cfg, cookies, form_data, datetime_list
         'Origin': cfg['origin_url'],
         'Referer': cfg['search_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # 利用目的を取得し、フォームデータに代入する
     form_data['layoutChildBody:childForm:purpose'] = cfg['selected_purpose']

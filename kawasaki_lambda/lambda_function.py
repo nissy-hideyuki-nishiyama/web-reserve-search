@@ -148,7 +148,7 @@ def get_cookie_and_formdata(cfg, index, logger=None):
     #logger.debug(f'インデックス: # {index}')
     # ヘッダーを設定する
     headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
             }
     # cookieを取得する
     (cookies, response) = get_cookie_request(cfg, logger=logger)
@@ -249,7 +249,7 @@ def search_empty_reserves_from_datesearch(cfg, threadsafe_list, reqdata, datetim
         'Origin': cfg['origin_url'],
         'Referer': cfg['search_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # reqdataからcookieとフォームデータを生成する
     cookies = dict(reqdata[th_index][0])
@@ -305,7 +305,7 @@ def search_empty_reserves_from_emptystate(cfg, cookies, datetime, form_data, res
         'Origin': cfg['origin_url'],
         'Referer': _referer,
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # フォームデータを変更する
     # doPagerの値をsubmitに変更する
@@ -531,7 +531,7 @@ def login_request(cfg, cookies, form_data):
         'Origin': cfg['origin_url'],
         'Referer': cfg['first_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
     params = urllib.parse.urlencode(form_data)
@@ -590,7 +590,7 @@ def input_userdata_in_login(cfg, userid, password, securityid, cookies, headers,
     #     'Origin': cfg['origin_url'],
     #     'Referer': cfg['mypindex_url'],
     #     'Content-Type': 'application/x-www-form-urlencoded',
-    #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+    #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     # }
     _form_data = form_data
     # # ユーザーIDとパスワード、セキュリティ番号を入力する
@@ -707,7 +707,7 @@ def go_to_search_date_menu_with_userid(cfg, userid, cookies, headers):
     headers = {
         'Host': 'www.fureai-net.city.kawasaki.jp',
         'Referer': headers['Referer'],
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # クッキーにユーザーIDを追加する
     #cookies[cfg['cookie_name_04']] = str(cfg['userid'])
@@ -780,7 +780,7 @@ def do_reserves_from_datesearch(cfg, cookies, form_data, date, time, logger=None
         'Origin': cfg['origin_url'],
         'Referer': cfg['search_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # 利用目的を取得し、フォームデータに代入する
     form_data['layoutChildBody:childForm:purpose'] = cfg['selected_purpose']
@@ -1377,7 +1377,7 @@ def lambda_handler(event, context):
     message_bodies = []
     # WEBリクエストのヘッダー
     headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
             }
     # HTTPリクエストデータ
     reqdata = []

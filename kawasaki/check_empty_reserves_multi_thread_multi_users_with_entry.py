@@ -261,7 +261,7 @@ def search_empty_reserves_from_datesearch(cfg, threadsafe_list, reqdata, datetim
         'Origin': cfg['origin_url'],
         'Referer': cfg['search_url'],
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # reqdataからcookieとフォームデータを生成する
     cookies = dict(reqdata[th_index][0])

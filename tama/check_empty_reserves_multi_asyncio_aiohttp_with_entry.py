@@ -475,7 +475,7 @@ def prepare_proc_for_reserve(cfg, headers, id, password, logger=None):
     """
     #ヘッダー情報
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # requestsバージョン
     ## トップページに接続する
@@ -806,7 +806,7 @@ def do_reserve(cfg, court_map, cookies, date, time, court, logger=None):
     reserve[f'{date}'][time] = [ court ]
     #ヘッダー情報
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
         'Referer' : cfg['day_search_url']
     }
     # コートIDを取得する
@@ -1114,7 +1114,7 @@ def main3(cfg, sorted_reserves_list, want_date_list, logger=None):
         return None
     #ヘッダー情報
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
     }
     # 利用者IDリストから順に検索する
     ## タイプ毎のID:PASSリストを取得する

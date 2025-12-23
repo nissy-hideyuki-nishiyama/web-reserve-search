@@ -282,7 +282,7 @@ def main():
     message_bodies = []
     # WEBリクエストのヘッダー
     headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
             }
     # 処理の開始
     # 祝日設定ファイルを読み込んで、祝日リストを作成する
