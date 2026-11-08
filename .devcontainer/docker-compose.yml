@@ -2,7 +2,7 @@
 
 services:
   dev_webscribe:
-    container_name: develop2023
+    container_name: develop2026
     hostname: devweb
     build:
       context: ..

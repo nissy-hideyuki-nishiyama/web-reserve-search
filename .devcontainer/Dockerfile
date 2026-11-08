@@ -101,4 +101,3 @@ RUN sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --de
 # 開発環境なので、initは不要
 # だが、Dockerコンテナでローカルデバッグするため必要となる
 # CMD ["/sbin/init"]
-
