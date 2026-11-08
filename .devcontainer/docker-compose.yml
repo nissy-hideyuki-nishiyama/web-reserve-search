@@ -8,7 +8,8 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
       args:
-        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-135.0.7049.114}
+        MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-157.0.8103.38}
+        # MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-135.0.7049.114}
         # MY_CHROME_DRIVER_VERSION: ${MY_CHROME_DRIVER_VERSION:-127.0.6533.72}
         # MY_CHROME_DRIVER_VERSION: $(bash ./lambda_layer/headless-chromium/chromedriver_version.sh)
     #restart: always

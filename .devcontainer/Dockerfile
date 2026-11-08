@@ -40,14 +40,17 @@ RUN apt update -y \
         libmagic1t64 \
         -y
 
+# uvをインストールする
+RUN curl -LsSf https://astral.sh | sh
 
 # pythonのaptリポジトリをインポートする
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt update -y
 RUN apt install -y \
-        python3.10 python3.10-venv python3.10-minimal \
-        python3.11 python3.11-venv python3.11-minimal \
-        python3.12 python3.12-venv python3.12-minimal
+        # python3.10 python3.10-venv python3.10-minimal \
+        # python3.11 python3.11-venv python3.11-minimal \
+        python3.12 python3.12-venv python3.12-minimal python3.12-dev \
+        python3.14 python3.14-venv python3.14-minimal python3.14-dev
 
 # custom installed packages
 # RUN apt install 
