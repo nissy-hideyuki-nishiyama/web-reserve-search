@@ -318,7 +318,7 @@ def go_to_search_reserves_page(driver, logger=None):
     # 待機時間を設定する
     wait = WebDriverWait(driver, 10, 2)
     # 検索ページがすべて表示されるまで待機する
-    wait.until(EC.presence_of_all_elements_located)
+    wait.until(EC.presence_of_all_elements_located((By.ID, "dlRepeat")))
     # 「メニューへ」ボタンをクリックする
     f_MenuBtn = wait.until(EC.element_to_be_clickable((By.ID, "ucPCFooter_btnToMenu")))
     f_MenuBtn.click()
@@ -424,7 +424,7 @@ def main_search_empty_reserves(cfg, date_list, threads_num=1, logger=None):
 @reserve_tools.elapsed_time
 def postproc_search_empty_reserves(cfg, threadsafe_list, logger=None):
     """
-    空き予約リストを整形して、LINEに通知する
+    空き予約リストを整形して、Discordに通知する
     """
     # 空き予約結果リストの通知メッセージ文の作成
     # 空き予約結果リストのLINE通知

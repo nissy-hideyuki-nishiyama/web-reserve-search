@@ -141,3 +141,6 @@ sam-app
 sam-app-lambda
 lambda_layer/selenium_layer/python/*
 lambda_layer/headless-chromium/python/*
+
+# 20261107
+src/*

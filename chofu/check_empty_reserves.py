@@ -5,6 +5,7 @@ import requests
 import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
+from urllib.parse import urlencode
 
 ## カレンダー関連
 from time import sleep
@@ -97,7 +98,8 @@ def do_post_request(cookies, form_data, pre_url, url):
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     # フォームデータからPOSTリクエストに含めるフォームデータをURLエンコードする
-    params = urllib3.parse.urlencode(form_data)
+    # params = urllib3.parse.urlencode(form_data)
+    params = urlencode(form_data)
     # POSTリクエストする
     session = requests.Session()
     session.mount('https://', TLSAdapter())
